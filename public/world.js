@@ -4,7 +4,7 @@ function Node(value) {
   this.parent = null;
 }
 
-Node.prototype.addChild = function(child, index) {
+Node.prototype.addChild = function(index, child) {
   this.children[index] = child;
   child.parent = this;
 }

@@ -1,5 +1,5 @@
 var canvas = document.querySelector('#canvas');
-canvas.width = 800;
+canvas.width = 1000;
 canvas.height = 1000;
 
 var ctx = canvas.getContext('2d');
@@ -101,31 +101,31 @@ function update() {
 
 update();
 
-function setValue(x0, y0, dimension, value) {
+function setValue(x, y, dimension, value) {
   var node = universe;
   var size = canvas.height;
-  var x = 0;
-  var y = 0;
+  var dx = 0;
+  var dy = 0;
   for (var i = 0; i < dimension; ++i) {
     size /= 2;
     var index = 0;
-    if (x0 < size + x && y0 < size + y) {
+    if (x < size + dx && y < size + dy) {
       index = 0;
-    } else if (x0 >= size + x && y0 < size + y) {
+    } else if (x >= size + dx && y < size + dy) {
       index = 1;
-      x += size;
-    } else if (x0 < size + x&& y0 >= size + y) {
+      dx += size;
+    } else if (x < size + dx && y >= size + dy) {
       index = 2;
-      y += size;
-    } else if (x0 >= size + x && y0 >= size + y) {
+      dy += size;
+    } else if (x >= size + dx && y >= size + dy) {
       index = 3;
-      x += size;
-      y += size;
+      dx += size;
+      dy += size;
     }
     var child = node.children[index];
     if (!child) {
       child = new Node();
-      node.addChild(child, index);
+      node.addChild(index, child);
     }
     node = child;
   }
