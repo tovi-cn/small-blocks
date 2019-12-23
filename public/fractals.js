@@ -81,8 +81,16 @@ function spiralFractal(node, depth) {
   }
 }
 
-function loadUniverse1(node) {
-  var universe = Node.fromJson(JSON.parse(universe1))
+function loadUniverse(universe, node) {
+  universe = Node.fromJson(JSON.parse(universe));
   node.children = universe.children;
   node.value = universe.value;
+}
+
+function loadUniverse1(node) {
+  loadUniverse(universe1, node);
+}
+
+function loadUniverse2(node) {
+  loadUniverse(universe2, node);
 }
