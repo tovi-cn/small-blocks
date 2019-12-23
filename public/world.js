@@ -5,6 +5,9 @@ function Node(value) {
 }
 
 Node.prototype.addChild = function(index, child) {
+  if (!child) {
+    return;
+  }
   this.children[index] = child;
   child.parent = this;
 }
@@ -19,4 +22,25 @@ Node.prototype.setAllValues = function(value) {
   for (var i = 0; i < 4; ++i) {
     this.children[i] = null;
   }
+};
+
+Node.prototype.toJson = function() {
+  var json = {};
+  json.value = this.value;
+  json.children = new Array(4);
+  for (var i = 0; i < 4; ++i) {
+    json.children[i] = this.children[i] ? this.children[i].toJson() : null;
+  }
+  return json;
+};
+
+Node.fromJson = function(json) {
+  if (!json) {
+    return null;
+  }
+  var node = new Node(json.value);
+  for (var i = 0; i < 4; ++i) {
+    node.addChild(i, Node.fromJson(json.children[i]));
+  }
+  return node;
 };
