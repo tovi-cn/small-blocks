@@ -1,0 +1,24 @@
+* {
+  box-sizing: border-box;
+  font: inherit;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #ddd;
+  color: #000;
+  font-family: 'Arial', sans-serif;
+  font-size: 14px;
+  padding: 16px;
+}
+
+.canvas {
+  background: #fff;
+  display: block;
+  touch-action: pinch-zoom;
+  margin: 0 auto;
+  max-height: calc(100vh - 2 * 16px);
+  max-width: 100%;
+  width: auto;
+}
