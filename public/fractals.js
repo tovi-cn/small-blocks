@@ -94,3 +94,7 @@ function loadUniverse1(node) {
 function loadUniverse2(node) {
   loadUniverse(universe2, node);
 }
+
+function loadUniverse3(node) {
+  loadUniverse(universe3, node);
+}
