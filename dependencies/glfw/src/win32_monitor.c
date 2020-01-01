@@ -1,5 +1,5 @@
 //========================================================================
-// GLFW 3.4 Win32 - www.glfw.org
+// GLFW 3.3 Win32 - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2002-2006 Marcus Geelnard
 // Copyright (c) 2006-2019 Camilla Löwy <elmindreda@glfw.org>
@@ -24,8 +24,6 @@
 //    distribution.
 //
 //========================================================================
-// Please use C89 style variable declarations in this file because VS 2010
-//========================================================================
 
 #include "internal.h"
 
@@ -33,7 +31,6 @@
 #include <string.h>
 #include <limits.h>
 #include <malloc.h>
-#include <wchar.h>
 
 
 // Callback for EnumDisplayMonitors in createMonitor
@@ -478,7 +475,7 @@ void _glfwPlatformGetVideoMode(_GLFWmonitor* monitor, GLFWvidmode* mode)
 GLFWbool _glfwPlatformGetGammaRamp(_GLFWmonitor* monitor, GLFWgammaramp* ramp)
 {
     HDC dc;
-    WORD values[3][256];
+    WORD values[768];
 
     dc = CreateDCW(L"DISPLAY", monitor->win32.adapterName, NULL, NULL);
     GetDeviceGammaRamp(dc, values);
@@ -486,9 +483,9 @@ GLFWbool _glfwPlatformGetGammaRamp(_GLFWmonitor* monitor, GLFWgammaramp* ramp)
 
     _glfwAllocGammaArrays(ramp, 256);
 
-    memcpy(ramp->red,   values[0], sizeof(values[0]));
-    memcpy(ramp->green, values[1], sizeof(values[1]));
-    memcpy(ramp->blue,  values[2], sizeof(values[2]));
+    memcpy(ramp->red,   values +   0, 256 * sizeof(unsigned short));
+    memcpy(ramp->green, values + 256, 256 * sizeof(unsigned short));
+    memcpy(ramp->blue,  values + 512, 256 * sizeof(unsigned short));
 
     return GLFW_TRUE;
 }
@@ -496,7 +493,7 @@ GLFWbool _glfwPlatformGetGammaRamp(_GLFWmonitor* monitor, GLFWgammaramp* ramp)
 void _glfwPlatformSetGammaRamp(_GLFWmonitor* monitor, const GLFWgammaramp* ramp)
 {
     HDC dc;
-    WORD values[3][256];
+    WORD values[768];
 
     if (ramp->size != 256)
     {
@@ -505,9 +502,9 @@ void _glfwPlatformSetGammaRamp(_GLFWmonitor* monitor, const GLFWgammaramp* ramp)
         return;
     }
 
-    memcpy(values[0], ramp->red,   sizeof(values[0]));
-    memcpy(values[1], ramp->green, sizeof(values[1]));
-    memcpy(values[2], ramp->blue,  sizeof(values[2]));
+    memcpy(values +   0, ramp->red,   256 * sizeof(unsigned short));
+    memcpy(values + 256, ramp->green, 256 * sizeof(unsigned short));
+    memcpy(values + 512, ramp->blue,  256 * sizeof(unsigned short));
 
     dc = CreateDCW(L"DISPLAY", monitor->win32.adapterName, NULL, NULL);
     SetDeviceGammaRamp(dc, values);

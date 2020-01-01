@@ -24,7 +24,6 @@
 //========================================================================
 
 #include <glad/gl.h>
-#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
 #if USE_NATIVE_OSMESA

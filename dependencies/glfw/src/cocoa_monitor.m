@@ -1,5 +1,5 @@
 //========================================================================
-// GLFW 3.4 macOS - www.glfw.org
+// GLFW 3.3 macOS - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2002-2006 Marcus Geelnard
 // Copyright (c) 2006-2019 Camilla Löwy <elmindreda@glfw.org>
@@ -23,8 +23,6 @@
 // 3. This notice may not be removed or altered from any source
 //    distribution.
 //
-//========================================================================
-// It is fine to use C99 in this file because it will not be built with VS
 //========================================================================
 
 #include "internal.h"
@@ -144,7 +142,7 @@ static GLFWbool modeIsGood(CGDisplayModeRef mode)
 // Convert Core Graphics display mode to GLFW video mode
 //
 static GLFWvidmode vidmodeFromCGDisplayMode(CGDisplayModeRef mode,
-                                            double fallbackRefreshRate)
+                                            CVDisplayLinkRef link)
 {
     GLFWvidmode result;
     result.width = (int) CGDisplayModeGetWidth(mode);
@@ -152,7 +150,11 @@ static GLFWvidmode vidmodeFromCGDisplayMode(CGDisplayModeRef mode,
     result.refreshRate = (int) round(CGDisplayModeGetRefreshRate(mode));
 
     if (result.refreshRate == 0)
-        result.refreshRate = (int) round(fallbackRefreshRate);
+    {
+        const CVTime time = CVDisplayLinkGetNominalOutputVideoRefreshPeriod(link);
+        if (!(time.flags & kCVTimeIsIndefinite))
+            result.refreshRate = (int) (time.timeScale / (double) time.timeValue);
+    }
 
 #if MAC_OS_X_VERSION_MAX_ALLOWED <= 101100
     CFStringRef format = CGDisplayModeCopyPixelEncoding(mode);
@@ -211,7 +213,7 @@ static void endFadeReservation(CGDisplayFadeReservationToken token)
 
 // Finds and caches the NSScreen corresponding to the specified monitor
 //
-static GLFWbool refreshMonitorScreen(_GLFWmonitor* monitor)
+GLFWbool refreshMonitorScreen(_GLFWmonitor* monitor)
 {
     if (monitor->ns.screen)
         return GLFW_TRUE;
@@ -234,68 +236,6 @@ static GLFWbool refreshMonitorScreen(_GLFWmonitor* monitor)
     return GLFW_FALSE;
 }
 
-// Returns the display refresh rate queried from the I/O registry
-//
-static double getFallbackRefreshRate(CGDirectDisplayID displayID)
-{
-    double refreshRate = 60.0;
-
-    io_iterator_t it;
-    io_service_t service;
-
-    if (IOServiceGetMatchingServices(kIOMasterPortDefault,
-                                     IOServiceMatching("IOFramebuffer"),
-                                     &it) != 0)
-    {
-        return refreshRate;
-    }
-
-    while ((service = IOIteratorNext(it)) != 0)
-    {
-        const CFNumberRef indexRef =
-            IORegistryEntryCreateCFProperty(service,
-                                            CFSTR("IOFramebufferOpenGLIndex"),
-                                            kCFAllocatorDefault,
-                                            kNilOptions);
-        if (!indexRef)
-            continue;
-
-        uint32_t index = 0;
-        CFNumberGetValue(indexRef, kCFNumberIntType, &index);
-        CFRelease(indexRef);
-
-        if (CGOpenGLDisplayMaskToDisplayID(1 << index) != displayID)
-            continue;
-
-        const CFNumberRef clockRef =
-            IORegistryEntryCreateCFProperty(service,
-                                            CFSTR("IOFBCurrentPixelClock"),
-                                            kCFAllocatorDefault,
-                                            kNilOptions);
-        const CFNumberRef countRef =
-            IORegistryEntryCreateCFProperty(service,
-                                            CFSTR("IOFBCurrentPixelCount"),
-                                            kCFAllocatorDefault,
-                                            kNilOptions);
-        if (!clockRef || !countRef)
-            break;
-
-        uint32_t clock = 0, count = 0;
-        CFNumberGetValue(clockRef, kCFNumberIntType, &clock);
-        CFNumberGetValue(countRef, kCFNumberIntType, &count);
-        CFRelease(clockRef);
-        CFRelease(countRef);
-
-        if (clock > 0 && count > 0)
-            refreshRate = clock / (double) count;
-
-        break;
-    }
-
-    IOObjectRelease(it);
-    return refreshRate;
-}
-
 
 //////////////////////////////////////////////////////////////////////////
 //////                       GLFW internal API                      //////
@@ -305,16 +245,18 @@ static double getFallbackRefreshRate(CGDirectDisplayID displayID)
 //
 void _glfwPollMonitorsNS(void)
 {
-    uint32_t displayCount;
+    uint32_t i, j, displayCount, disconnectedCount;
+    CGDirectDisplayID* displays;
+    _GLFWmonitor** disconnected = NULL;
+
     CGGetOnlineDisplayList(0, NULL, &displayCount);
-    CGDirectDisplayID* displays = calloc(displayCount, sizeof(CGDirectDisplayID));
+    displays = calloc(displayCount, sizeof(CGDirectDisplayID));
     CGGetOnlineDisplayList(displayCount, displays, &displayCount);
 
-    for (int i = 0;  i < _glfw.monitorCount;  i++)
+    for (i = 0;  i < _glfw.monitorCount;  i++)
         _glfw.monitors[i]->ns.screen = nil;
 
-    _GLFWmonitor** disconnected = NULL;
-    uint32_t disconnectedCount = _glfw.monitorCount;
+    disconnectedCount = _glfw.monitorCount;
     if (disconnectedCount)
     {
         disconnected = calloc(_glfw.monitorCount, sizeof(_GLFWmonitor*));
@@ -323,17 +265,19 @@ void _glfwPollMonitorsNS(void)
                _glfw.monitorCount * sizeof(_GLFWmonitor*));
     }
 
-    for (uint32_t i = 0;  i < displayCount;  i++)
+    for (i = 0;  i < displayCount;  i++)
     {
+        _GLFWmonitor* monitor;
+        const uint32_t unitNumber = CGDisplayUnitNumber(displays[i]);
+
         if (CGDisplayIsAsleep(displays[i]))
             continue;
 
-        // HACK: Compare unit numbers instead of display IDs to work around
-        //       display replacement on machines with automatic graphics
-        //       switching
-        const uint32_t unitNumber = CGDisplayUnitNumber(displays[i]);
-        for (uint32_t j = 0;  j < disconnectedCount;  j++)
+        for (j = 0;  j < disconnectedCount;  j++)
         {
+            // HACK: Compare unit numbers instead of display IDs to work around
+            //       display replacement on machines with automatic graphics
+            //       switching
             if (disconnected[j] && disconnected[j]->ns.unitNumber == unitNumber)
             {
                 disconnected[j] = NULL;
@@ -346,21 +290,16 @@ void _glfwPollMonitorsNS(void)
         if (!name)
             name = _glfw_strdup("Unknown");
 
-        _GLFWmonitor* monitor = _glfwAllocMonitor(name, size.width, size.height);
+        monitor = _glfwAllocMonitor(name, size.width, size.height);
         monitor->ns.displayID  = displays[i];
         monitor->ns.unitNumber = unitNumber;
 
         free(name);
 
-        CGDisplayModeRef mode = CGDisplayCopyDisplayMode(displays[i]);
-        if (CGDisplayModeGetRefreshRate(mode) == 0.0)
-            monitor->ns.fallbackRefreshRate = getFallbackRefreshRate(displays[i]);
-        CGDisplayModeRelease(mode);
-
         _glfwInputMonitor(monitor, GLFW_CONNECTED, _GLFW_INSERT_LAST);
     }
 
-    for (uint32_t i = 0;  i < disconnectedCount;  i++)
+    for (i = 0;  i < disconnectedCount;  i++)
     {
         if (disconnected[i])
             _glfwInputMonitor(disconnected[i], GLFW_DISCONNECTED, 0);
@@ -374,25 +313,30 @@ void _glfwPollMonitorsNS(void)
 //
 void _glfwSetVideoModeNS(_GLFWmonitor* monitor, const GLFWvidmode* desired)
 {
+    CFArrayRef modes;
+    CFIndex count, i;
+    CVDisplayLinkRef link;
+    CGDisplayModeRef native = NULL;
     GLFWvidmode current;
-    _glfwPlatformGetVideoMode(monitor, &current);
+    const GLFWvidmode* best;
 
-    const GLFWvidmode* best = _glfwChooseVideoMode(monitor, desired);
+    best = _glfwChooseVideoMode(monitor, desired);
+    _glfwPlatformGetVideoMode(monitor, &current);
     if (_glfwCompareVideoModes(&current, best) == 0)
         return;
 
-    CFArrayRef modes = CGDisplayCopyAllDisplayModes(monitor->ns.displayID, NULL);
-    const CFIndex count = CFArrayGetCount(modes);
-    CGDisplayModeRef native = NULL;
+    CVDisplayLinkCreateWithCGDisplay(monitor->ns.displayID, &link);
 
-    for (CFIndex i = 0;  i < count;  i++)
+    modes = CGDisplayCopyAllDisplayModes(monitor->ns.displayID, NULL);
+    count = CFArrayGetCount(modes);
+
+    for (i = 0;  i < count;  i++)
     {
         CGDisplayModeRef dm = (CGDisplayModeRef) CFArrayGetValueAtIndex(modes, i);
         if (!modeIsGood(dm))
             continue;
 
-        const GLFWvidmode mode =
-            vidmodeFromCGDisplayMode(dm, monitor->ns.fallbackRefreshRate);
+        const GLFWvidmode mode = vidmodeFromCGDisplayMode(dm, link);
         if (_glfwCompareVideoModes(best, &mode) == 0)
         {
             native = dm;
@@ -411,6 +355,7 @@ void _glfwSetVideoModeNS(_GLFWmonitor* monitor, const GLFWvidmode* desired)
     }
 
     CFRelease(modes);
+    CVDisplayLinkRelease(link);
 }
 
 // Restore the previously saved (original) video mode
@@ -498,21 +443,26 @@ GLFWvidmode* _glfwPlatformGetVideoModes(_GLFWmonitor* monitor, int* count)
 {
     @autoreleasepool {
 
+    CFArrayRef modes;
+    CFIndex found, i, j;
+    GLFWvidmode* result;
+    CVDisplayLinkRef link;
+
     *count = 0;
 
-    CFArrayRef modes = CGDisplayCopyAllDisplayModes(monitor->ns.displayID, NULL);
-    const CFIndex found = CFArrayGetCount(modes);
-    GLFWvidmode* result = calloc(found, sizeof(GLFWvidmode));
+    CVDisplayLinkCreateWithCGDisplay(monitor->ns.displayID, &link);
 
-    for (CFIndex i = 0;  i < found;  i++)
+    modes = CGDisplayCopyAllDisplayModes(monitor->ns.displayID, NULL);
+    found = CFArrayGetCount(modes);
+    result = calloc(found, sizeof(GLFWvidmode));
+
+    for (i = 0;  i < found;  i++)
     {
         CGDisplayModeRef dm = (CGDisplayModeRef) CFArrayGetValueAtIndex(modes, i);
         if (!modeIsGood(dm))
             continue;
 
-        const GLFWvidmode mode =
-            vidmodeFromCGDisplayMode(dm, monitor->ns.fallbackRefreshRate);
-        CFIndex j;
+        const GLFWvidmode mode = vidmodeFromCGDisplayMode(dm, link);
 
         for (j = 0;  j < *count;  j++)
         {
@@ -529,6 +479,7 @@ GLFWvidmode* _glfwPlatformGetVideoModes(_GLFWmonitor* monitor, int* count)
     }
 
     CFRelease(modes);
+    CVDisplayLinkRelease(link);
     return result;
 
     } // autoreleasepool
@@ -538,9 +489,16 @@ void _glfwPlatformGetVideoMode(_GLFWmonitor* monitor, GLFWvidmode *mode)
 {
     @autoreleasepool {
 
-    CGDisplayModeRef native = CGDisplayCopyDisplayMode(monitor->ns.displayID);
-    *mode = vidmodeFromCGDisplayMode(native, monitor->ns.fallbackRefreshRate);
-    CGDisplayModeRelease(native);
+    CGDisplayModeRef displayMode;
+    CVDisplayLinkRef link;
+
+    CVDisplayLinkCreateWithCGDisplay(monitor->ns.displayID, &link);
+
+    displayMode = CGDisplayCopyDisplayMode(monitor->ns.displayID);
+    *mode = vidmodeFromCGDisplayMode(displayMode, link);
+    CGDisplayModeRelease(displayMode);
+
+    CVDisplayLinkRelease(link);
 
     } // autoreleasepool
 }
@@ -549,7 +507,7 @@ GLFWbool _glfwPlatformGetGammaRamp(_GLFWmonitor* monitor, GLFWgammaramp* ramp)
 {
     @autoreleasepool {
 
-    uint32_t size = CGDisplayGammaTableCapacity(monitor->ns.displayID);
+    uint32_t i, size = CGDisplayGammaTableCapacity(monitor->ns.displayID);
     CGGammaValue* values = calloc(size * 3, sizeof(CGGammaValue));
 
     CGGetDisplayTransferByTable(monitor->ns.displayID,
@@ -561,7 +519,7 @@ GLFWbool _glfwPlatformGetGammaRamp(_GLFWmonitor* monitor, GLFWgammaramp* ramp)
 
     _glfwAllocGammaArrays(ramp, size);
 
-    for (uint32_t i = 0; i < size; i++)
+    for (i = 0; i < size; i++)
     {
         ramp->red[i]   = (unsigned short) (values[i] * 65535);
         ramp->green[i] = (unsigned short) (values[i + size] * 65535);
@@ -578,9 +536,10 @@ void _glfwPlatformSetGammaRamp(_GLFWmonitor* monitor, const GLFWgammaramp* ramp)
 {
     @autoreleasepool {
 
+    int i;
     CGGammaValue* values = calloc(ramp->size * 3, sizeof(CGGammaValue));
 
-    for (unsigned int i = 0;  i < ramp->size;  i++)
+    for (i = 0;  i < ramp->size;  i++)
     {
         values[i]                  = ramp->red[i] / 65535.f;
         values[i + ramp->size]     = ramp->green[i] / 65535.f;

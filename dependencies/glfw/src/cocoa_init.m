@@ -1,5 +1,5 @@
 //========================================================================
-// GLFW 3.4 macOS - www.glfw.org
+// GLFW 3.3 macOS - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2009-2019 Camilla Löwy <elmindreda@glfw.org>
 //
@@ -22,8 +22,6 @@
 // 3. This notice may not be removed or altered from any source
 //    distribution.
 //
-//========================================================================
-// It is fine to use C99 in this file because it will not be built with VS
 //========================================================================
 
 #include "internal.h"
@@ -431,8 +429,9 @@ static GLFWbool initializeTIS(void)
         // In case we are unbundled, make us a proper UI application
         [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
 
-        // Menu bar setup must go between sharedApplication and finishLaunching
-        // in order to properly emulate the behavior of NSApplicationMain
+        // Menu bar setup must go between sharedApplication above and
+        // finishLaunching below, in order to properly emulate the behavior
+        // of NSApplicationMain
 
         if ([[NSBundle mainBundle] pathForResource:@"MainMenu" ofType:@"nib"])
         {
@@ -447,9 +446,9 @@ static GLFWbool initializeTIS(void)
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification
 {
-    _glfw.ns.finishedLaunching = GLFW_TRUE;
-    _glfwPlatformPostEmptyEvent();
     [NSApp stop:nil];
+
+    _glfwPlatformPostEmptyEvent();
 }
 
 - (void)applicationDidHide:(NSNotification *)notification
