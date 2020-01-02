@@ -156,7 +156,7 @@ bool Game::Initialize() {
 
   world_ = new Block();
   world_->set_value(1);
-  srand(time(nullptr));
+  srand(static_cast<unsigned int>(time(nullptr)));
   for (int i = 2; i <= 6; ++i) {
     for (int j = 0; j < i * 10; ++j) {
       float x = kWorldSize * RandomFloat();
@@ -334,8 +334,8 @@ void Game::DrawBlock(Block *block, float x, float y, float z, float size) {
 
     glUseProgram(program_);
     glBindVertexArray(vertex_array_);
-    glDrawElements(GL_TRIANGLES, indices_.size(), GL_UNSIGNED_INT,
-                   reinterpret_cast<void *>(0));
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices_.size()),
+                   GL_UNSIGNED_INT, reinterpret_cast<void *>(0));
     glBindVertexArray(0);
     glUseProgram(0);
   }
