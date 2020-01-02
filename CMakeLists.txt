@@ -19,7 +19,9 @@ else()
 endif()
 
 add_executable(recurse-builder
+  src/block.cc
   src/game.cc
+  src/geometry.cc
   src/main.cc
   )
 target_link_libraries(recurse-builder glad)

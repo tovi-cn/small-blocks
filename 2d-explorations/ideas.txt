@@ -1,6 +1,0 @@
-Zooming into a specific node should automatically set the node as a
-local universe.
-
-Turn it into a game.
-
-Simplify nodes with identical children.
