@@ -1,8 +1,18 @@
-Spawn in a half block, half air world.
 Keybindings to change the size of the player by a factor of 2.
   This changes the size of the block as well.
-Store the world on and load from disk.
+  Avoid shrinking blocks below floating precision limit.
+
+Change between different types of blocks.
+
+Highlight where the block will be placed.
+
+---
+
 Cuboid collision with the player and the world.
+Store the world and load from disk.
 Jetpack flying.
 Better lighting using vertex normals with shaders.
-Details.
+Add background fog when shrinking to cover up render distance.
+Sound effects when building and changing size.
+Background music.
+Main menu.

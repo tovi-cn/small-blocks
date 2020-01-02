@@ -9,6 +9,7 @@
 #include "glm/vec3.hpp"
 #include "glm/mat4x4.hpp"
 
+#include "fractals.h"
 #include "utilities.h"
 
 static const char *kVertexShaderText =
@@ -175,6 +176,9 @@ bool Game::Initialize() {
   //   }
   // }
 
+  world_->set_value(0);
+  // SimpleFractal(world_, 16);
+
   return true;
 }
 
@@ -192,6 +196,58 @@ void Game::Run() {
 
     glfwPollEvents();
   }
+}
+
+void Game::Update(float delta_time) {
+  double mouse_x;
+  double mouse_y;
+  glfwGetCursorPos(window_, &mouse_x, &mouse_y);
+  float mouse_delta_x = static_cast<float>(mouse_x - mouse_last_x_);
+  float mouse_delta_y = static_cast<float>(mouse_y - mouse_last_y_);
+  mouse_last_x_ = mouse_x;
+  mouse_last_y_ = mouse_y;
+
+  if (window_focused_) {
+    float mouse_sensitivity = 0.005f;
+    camera_rotation_.x += -mouse_delta_y * mouse_sensitivity;
+    camera_rotation_.y += -mouse_delta_x * mouse_sensitivity;
+    camera_rotation_.x = glm::clamp(camera_rotation_.x, glm::radians(-90.0f),
+                                    glm::radians(90.0f));
+
+    glm::mat4 rotation(1.0f);
+    rotation = glm::rotate(camera_rotation_.y, glm::vec3(0.0f, 1.0f, 0.0f)) * rotation;
+    glm::vec3 forward = glm::vec3(rotation * glm::vec4(0.0f, 0.0f, -1.0f, 1.0f));
+    glm::vec3 up(0.0f, 1.0f, 0.0f);
+    glm::vec3 right = glm::normalize(glm::cross(forward, up));
+
+    glm::vec3 direction(0.0f);
+    if (pressed_keys_.test(GLFW_KEY_W)) {
+      direction += forward;
+    }
+    if (pressed_keys_.test(GLFW_KEY_S)) {
+      direction -= forward;
+    }
+    if (pressed_keys_.test(GLFW_KEY_A)) {
+      direction -= right;
+    }
+    if (pressed_keys_.test(GLFW_KEY_D)) {
+      direction += right;
+    }
+    if (direction != glm::vec3(0.0f)) {
+      camera_position_ += glm::normalize(direction) * speed_ * delta_time;
+    }
+
+    if (pressed_keys_.test(GLFW_KEY_SPACE)) {
+      camera_position_ += up * speed_ * delta_time;
+    }
+    if (pressed_keys_.test(GLFW_KEY_LEFT_SHIFT)) {
+      camera_position_ -= up * speed_ * delta_time;
+    }
+  }
+
+  camera_position_.x = glm::clamp(camera_position_.x, -kWorldSize, 2 * kWorldSize);
+  camera_position_.y = glm::clamp(camera_position_.y, -kWorldSize, 2 * kWorldSize);
+  camera_position_.z = glm::clamp(camera_position_.z, -kWorldSize, 2 * kWorldSize);
 }
 
 void Game::SetBlock(float x, float y, float z, int dimension, int value) {
@@ -257,56 +313,8 @@ void Game::Shrink() {
 
 void Game::Grow() {
   speed_ *= 2;
-  speed_ = glm::min(speed_, glm::pow(2.0f, 2.0f));
+  speed_ = glm::min(speed_, glm::pow(2.0f, 3.0f));
   std::cout << "Speed: " << speed_ << "\n";
-}
-
-void Game::Update(float delta_time) {
-  double mouse_x;
-  double mouse_y;
-  glfwGetCursorPos(window_, &mouse_x, &mouse_y);
-  float mouse_delta_x = static_cast<float>(mouse_x - mouse_last_x_);
-  float mouse_delta_y = static_cast<float>(mouse_y - mouse_last_y_);
-  mouse_last_x_ = mouse_x;
-  mouse_last_y_ = mouse_y;
-
-  if (window_focused_) {
-    float mouse_sensitivity = 0.005f;
-    camera_rotation_.x += -mouse_delta_y * mouse_sensitivity;
-    camera_rotation_.y += -mouse_delta_x * mouse_sensitivity;
-    camera_rotation_.x = glm::clamp(camera_rotation_.x, glm::radians(-90.0f),
-                                    glm::radians(90.0f));
-
-    glm::mat4 rotation(1.0f);
-    rotation = glm::rotate(camera_rotation_.y, glm::vec3(0.0f, 1.0f, 0.0f)) * rotation;
-    glm::vec3 forward = glm::vec3(rotation * glm::vec4(0.0f, 0.0f, -1.0f, 1.0f));
-    glm::vec3 up(0.0f, 1.0f, 0.0f);
-    glm::vec3 right = glm::normalize(glm::cross(forward, up));
-
-    glm::vec3 direction(0.0f);
-    if (pressed_keys_.test(GLFW_KEY_W)) {
-      direction += forward;
-    }
-    if (pressed_keys_.test(GLFW_KEY_S)) {
-      direction -= forward;
-    }
-    if (pressed_keys_.test(GLFW_KEY_A)) {
-      direction -= right;
-    }
-    if (pressed_keys_.test(GLFW_KEY_D)) {
-      direction += right;
-    }
-    if (direction != glm::vec3(0.0f)) {
-      camera_position_ += glm::normalize(direction) * speed_ * delta_time;
-    }
-
-    if (pressed_keys_.test(GLFW_KEY_SPACE)) {
-      camera_position_ += up * speed_ * delta_time;
-    }
-    if (pressed_keys_.test(GLFW_KEY_LEFT_SHIFT)) {
-      camera_position_ -= up * speed_ * delta_time;
-    }
-  }
 }
 
 void Game::Render() {
