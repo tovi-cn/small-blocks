@@ -15,6 +15,7 @@
 class Game {
  public:
   static constexpr float kWorldSize = 10;
+  static constexpr float kDefaultSpeed = 1.0f;
 
   Game();
   ~Game();
@@ -54,11 +55,14 @@ class Game {
   bool window_focused_;
   std::bitset<32> pressed_mouse_buttons_;
   std::bitset<1024> pressed_keys_;
-
-  glm::vec3 camera_position_;
-  glm::vec3 camera_rotation_;
   double mouse_last_x_;
   double mouse_last_y_;
+
+  float wireframe_;
+  glm::vec3 camera_position_;
+  glm::vec3 camera_rotation_;
+
+  float speed_;
 
   Block *world_;
 

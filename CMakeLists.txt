@@ -23,6 +23,7 @@ add_executable(recurse-builder
   src/game.cc
   src/geometry.cc
   src/main.cc
+  src/utilities.cc
   )
 target_link_libraries(recurse-builder glad)
 target_link_libraries(recurse-builder glfw ${GLFW_LIBRARIES})

@@ -2,11 +2,14 @@
 
 #include <iostream>
 #include <vector>
+#include <ctime>
 
 #include "glm/gtx/euler_angles.hpp"
 #include "glm/gtx/transform.hpp"
 #include "glm/vec3.hpp"
 #include "glm/mat4x4.hpp"
+
+#include "utilities.h"
 
 static const char *kVertexShaderText =
 "#version 330 core\n"
@@ -31,8 +34,10 @@ static const char *kFragmentShaderText =
 Game::Game() 
     : window_(nullptr), window_focused_(false),
       pressed_keys_(),
-      camera_position_(0.0f), camera_rotation_(0.0f),
       mouse_last_x_(0.0), mouse_last_y_(0.0),
+      wireframe_(false),
+      camera_position_(0.0f), camera_rotation_(0.0f),
+      speed_(kDefaultSpeed),
       world_() {}
 
 Game::~Game() {
@@ -49,6 +54,10 @@ Game::~Game() {
 }
 
 bool Game::Initialize() {
+  // Random
+
+  SeedRandom();
+
   // Initialize Window
 
   glfwSetErrorCallback(OnGlfwError);
@@ -81,8 +90,8 @@ bool Game::Initialize() {
 	glDebugMessageCallback(OnGlError, 0);
 
   glEnable(GL_DEPTH_TEST);
-  // glEnable(GL_CULL_FACE);  
-  // glCullFace(GL_BACK);
+  glEnable(GL_CULL_FACE);
+  glCullFace(GL_BACK);
 
   // Camera position
 
@@ -147,7 +156,16 @@ bool Game::Initialize() {
 
   world_ = new Block();
   world_->set_value(1);
-  SetBlock(0.0f, 0.0f, 0.0f, 4, 0);
+  srand(time(nullptr));
+  for (int i = 2; i <= 6; ++i) {
+    for (int j = 0; j < i * 10; ++j) {
+      float x = kWorldSize * RandomFloat();
+      float y = kWorldSize * RandomFloat();
+      float z = kWorldSize * RandomFloat();
+
+      SetBlock(x, y, z, i, 0);
+    }
+  }
 
   return true;
 }
@@ -235,7 +253,6 @@ void Game::Update(float delta_time) {
     camera_rotation_.x = glm::clamp(camera_rotation_.x, glm::radians(-90.0f),
                                     glm::radians(90.0f));
 
-    float speed = 2.0f;
     glm::mat4 rotation(1.0f);
     rotation = glm::rotate(camera_rotation_.y, glm::vec3(0.0f, 1.0f, 0.0f)) * rotation;
     glm::vec3 forward = glm::vec3(rotation * glm::vec4(0.0f, 0.0f, -1.0f, 1.0f));
@@ -256,14 +273,14 @@ void Game::Update(float delta_time) {
       direction += right;
     }
     if (direction != glm::vec3(0.0f)) {
-      camera_position_ += glm::normalize(direction) * speed * delta_time;
+      camera_position_ += glm::normalize(direction) * speed_ * delta_time;
     }
 
     if (pressed_keys_.test(GLFW_KEY_SPACE)) {
-      camera_position_ += up * speed * delta_time;
+      camera_position_ += up * speed_ * delta_time;
     }
     if (pressed_keys_.test(GLFW_KEY_LEFT_SHIFT)) {
-      camera_position_ -= up * speed * delta_time;
+      camera_position_ -= up * speed_ * delta_time;
     }
   }
 }
@@ -287,6 +304,7 @@ void Game::Render() {
   view_matrix = glm::translate(-camera_position_) * view_matrix;
   view_matrix = glm::rotate(-camera_rotation_.y, glm::vec3(0.0f, 1.0f, 0.0f)) * view_matrix;
   view_matrix = glm::rotate(-camera_rotation_.x, glm::vec3(1.0f, 0.0f, 0.0f)) * view_matrix;
+  view_matrix = glm::scale(glm::vec3(1.0f / speed_)) * view_matrix;
 
   glm::mat4 view_projection_matrix = projection_matrix * view_matrix;
 
@@ -349,6 +367,20 @@ void Game::MouseUp(int button) {
 void Game::KeyDown(int key) {
   pressed_keys_.set(key);
 
+  if (key == GLFW_KEY_Q) {
+    speed_ /= 2;
+  }
+  if (key == GLFW_KEY_E) {
+    speed_ *= 2;
+  }
+  if (key == GLFW_KEY_G) {
+    wireframe_ = !wireframe_;
+    if (wireframe_) {
+      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    } else {
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
+  }
   if (key == GLFW_KEY_ESCAPE) {
     UnfocusWindow();
   }
