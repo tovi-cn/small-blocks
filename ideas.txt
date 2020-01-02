@@ -1,0 +1,8 @@
+Spawn in a half block, half air world.
+Keybindings to change the size of the player by a factor of 2.
+  This changes the size of the block as well.
+Store the world on and load from disk.
+Cuboid collision with the player and the world.
+Jetpack flying.
+Better lighting using vertex normals with shaders.
+Details.
