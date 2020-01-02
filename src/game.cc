@@ -20,7 +20,8 @@ static const char *kVertexShaderText =
 "out vec3 color;\n"
 "void main() {\n"
 "  gl_Position = uViewProjection * uModel * vec4(vPos, 1.0);\n"
-"  color = vCol;\n"
+"  // color = vCol;\n"
+"  color = vPos;\n"
 "}\n";
 
 static const char *kFragmentShaderText =
@@ -83,7 +84,10 @@ bool Game::Initialize() {
   // Initialize OpenGL
 
   glfwMakeContextCurrent(window_);
-  gladLoadGL();
+  if (!gladLoadGL()) {
+    glfwTerminate();
+    return false;
+  }
   glfwSwapInterval(0);
 
 	glEnable(GL_DEBUG_OUTPUT);
@@ -95,7 +99,7 @@ bool Game::Initialize() {
 
   // Camera position
 
-  camera_position_ = glm::vec3(kWorldSize / 2.0f, 1.5f, -2.5f);
+  camera_position_ = glm::vec3(kWorldSize / 2.0f, kWorldSize / 2 + 1.5f, -2.5f);
   camera_rotation_.y = glm::radians(-180.0f);
 
   // Generate geometry
@@ -155,17 +159,21 @@ bool Game::Initialize() {
   // Create world
 
   world_ = new Block();
-  world_->set_value(1);
-  srand(static_cast<unsigned int>(time(nullptr)));
-  for (int i = 2; i <= 6; ++i) {
-    for (int j = 0; j < i * 10; ++j) {
-      float x = kWorldSize * RandomFloat();
-      float y = kWorldSize * RandomFloat();
-      float z = kWorldSize * RandomFloat();
+  world_->set_child(0, new Block(1));
+  world_->set_child(1, new Block(1));
+  world_->set_child(2, new Block(1));
+  world_->set_child(3, new Block(1));
 
-      SetBlock(x, y, z, i, 0);
-    }
-  }
+  SetBlock(5.0f, 5.0f, 5.0f, 16, 0);
+
+  // for (int i = 3; i <= 10; ++i) {
+  //   for (int j = 0; j < i * 1; ++j) {
+  //     float x = kWorldSize * RandomFloat();
+  //     float y = kWorldSize * RandomFloat();
+  //     float z = kWorldSize * RandomFloat();
+  //     SetBlock(x, y, z, i, 0);
+  //   }
+  // }
 
   return true;
 }
@@ -195,35 +203,39 @@ void Game::SetBlock(float x, float y, float z, int dimension, int value) {
 
   for (int i = 0; i < dimension; ++i) {
     size /= 2.0f;
+    float center_x = size + dx;
+    float center_y = size + dy;
+    float center_z = size + dz;
+
     int index = 0;
-    if (x < size + dx && y < size + dy && z < size + dz) {
+    if        (x  < center_x && y >= center_y && z >= center_z) {
       index = 0;
-    } else if (x >= size + dx && y < size + dy && z < size + dz) {
+      dy += size;
+      dz += size;
+    } else if (x >= center_x && y >= center_y && z >= center_z) {
       index = 1;
       dx += size;
-    } else if (x < size + dx && y >= size + dy && z < size + dz) {
+      dy += size;
+      dz += size;
+    } else if (x  < center_x && y >= center_y && z  < center_z) {
       index = 2;
       dy += size;
-    } else if (x >= size + dx && y >= size + dy && z < size + dz) {
+    } else if (x >= center_x && y >= center_y && z  < center_z) {
       index = 3;
       dx += size;
       dy += size;
-    } else if (x < size + dx && y < size + dy && z >= size + dz) {
+    } else if (x  < center_x && y  < center_y && z >= center_z) {
       index = 4;
       dz += size;
-    } else if (x >= size + dx && y < size + dy && z >= size + dz) {
+    } else if (x >= center_x && y  < center_y && z >= center_z) {
       index = 5;
       dx += size;
       dz += size;
-    } else if (x < size + dx && y >= size + dy && z >= size + dz) {
+    } else if (x  < center_x && y  < center_y && z  < center_z) {
       index = 6;
-      dy += size;
-      dz += size;
-    } else if (x >= size + dx && y >= size + dy && z >= size + dz) {
+    } else if (x >= center_x && y  < center_y && z  < center_z) {
       index = 7;
       dx += size;
-      dy += size;
-      dz += size;
     }
 
     Block *child = block->child(index);
@@ -235,6 +247,18 @@ void Game::SetBlock(float x, float y, float z, int dimension, int value) {
   }
 
   block->set_value(value);
+}
+
+void Game::Shrink() {
+  speed_ /= 2;
+  speed_ = glm::max(speed_, glm::pow(2.0f, -8.0f));
+  std::cout << "Speed: " << speed_ << "\n";
+}
+
+void Game::Grow() {
+  speed_ *= 2;
+  speed_ = glm::min(speed_, glm::pow(2.0f, 2.0f));
+  std::cout << "Speed: " << speed_ << "\n";
 }
 
 void Game::Update(float delta_time) {
@@ -296,7 +320,7 @@ void Game::Render() {
 
   float fov = 90.0f;
   float near = 0.01f;;
-  float far = 100.0f;
+  float far = 500.0f;
   glm::mat4 projection_matrix =
       glm::perspective(glm::radians(fov), aspect, near, far);
 
@@ -342,15 +366,15 @@ void Game::DrawBlock(Block *block, float x, float y, float z, float size) {
 
   if (!block->is_leaf()) {
     size /= 2;
-    DrawBlock(block->child(0), x, y, z, size);
-    DrawBlock(block->child(1), x + size, y, z, size);
-    DrawBlock(block->child(2), x, y + size, z, size);
-    DrawBlock(block->child(3), x + size, y + size, z, size);
+    DrawBlock(block->child(0), x       , y + size   , z + size, size);
+    DrawBlock(block->child(1), x + size, y + size   , z + size, size);
+    DrawBlock(block->child(2), x       , y + size   , z       , size);
+    DrawBlock(block->child(3), x + size, y + size   , z       , size);
 
-    DrawBlock(block->child(4), x, y, z + size, size);
-    DrawBlock(block->child(5), x + size, y, z + size, size);
-    DrawBlock(block->child(6), x, y + size, z + size, size);
-    DrawBlock(block->child(7), x + size, y + size, z + size, size);
+    DrawBlock(block->child(4), x       , y          , z + size, size);
+    DrawBlock(block->child(5), x + size, y          , z + size, size);
+    DrawBlock(block->child(6), x       , y          , z       , size);
+    DrawBlock(block->child(7), x + size, y          , z       , size);
   }
 }
 
@@ -368,10 +392,10 @@ void Game::KeyDown(int key) {
   pressed_keys_.set(key);
 
   if (key == GLFW_KEY_Q) {
-    speed_ /= 2;
+    Shrink();
   }
   if (key == GLFW_KEY_E) {
-    speed_ *= 2;
+    Grow();
   }
   if (key == GLFW_KEY_G) {
     wireframe_ = !wireframe_;

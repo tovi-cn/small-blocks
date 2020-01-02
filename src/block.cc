@@ -1,6 +1,11 @@
 #include "block.h"
 
 void Block::Simplify() {
+  for (int i = 0; i < 8; ++i) {
+    if (children_[i]) {
+      children_[i]->Simplify();
+    }
+  }
   bool equal_children = true;
   for (int i = 0; i < 8; ++i) {
     if (children_[i] && children_[i]->value_ != children_[0]->value_) {
@@ -13,12 +18,6 @@ void Block::Simplify() {
     for (int i = 0; i < 8; ++i) {
       delete children_[i];
       children_[i] = nullptr;
-    }
-  } else {
-    for (int i = 0; i < 8; ++i) {
-      if (children_[i]) {
-        children_[i]->Simplify();
-      }
     }
   }
 }

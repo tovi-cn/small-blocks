@@ -7,6 +7,7 @@
 #include "glad/glad.h"
 #define GLFW_INCLUDE_NONE
 #include "GLFW/glfw3.h"
+#include "glm/gtx/transform.hpp"
 #include "glm/vec3.hpp"
 
 #include "block.h"
@@ -15,7 +16,7 @@
 class Game {
  public:
   static constexpr float kWorldSize = 10;
-  static constexpr float kDefaultSpeed = 1.0f;
+  static constexpr float kDefaultSpeed = 0.5f;
 
   Game();
   ~Game();
@@ -24,6 +25,8 @@ class Game {
   void Run();
 
   void SetBlock(float x, float y, float z, int dimension, int value);
+  void Shrink();
+  void Grow();
 
   void MouseDown(int button);
   void MouseUp(int button);

@@ -6,12 +6,12 @@
 // An octree block, consisting of eight child blocks
 //
 //   .-------.
-//   | 0 | 1 | \      Top
+//   | 0 | 1 | \      Top (seen from above)
 //   |---+---|  \
 //   | 2 | 3 |   \
 //   '-------'    \
 //    \    .-------.
-//     \   | 4 | 5 |  Bottom
+//     \   | 4 | 5 |  Bottom (seen from above)
 //      \  |---+---|
 //       \ | 6 | 7 |
 //         '-------'
