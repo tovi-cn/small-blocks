@@ -1,14 +1,11 @@
-Place and destroy blocks in the current dimension.
 Highlight where the block will be placed.
-Change between different types of blocks.
-
----
 
 Cuboid collision with the player and the world.
 Store the world and load from disk.
 Jetpack flying.
-Better lighting using vertex normals with shaders.
+Better lighting.
 Add background fog when shrinking to cover up render distance.
+
 Sound effects when building and changing size.
 Background music.
 Main menu.
