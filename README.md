@@ -3,7 +3,7 @@
 Small Blocks is a 3D building game where the player can shrink and grow to build creations of any size.
 You can build with extremely large blocks, extremely small blocks, or why not something in between.
 
-# Controls
+## Controls
 
 - Move player with the mouse and `W` `A` `S` `D`
 - Left click to break a block
@@ -17,15 +17,15 @@ Other controls:
 - Regenerate the world with `R`
 - Toggle wireframe mode with `G`
 
-# Compiling
+## Compiling
 
-## macOS and Linux
+### macOS and Linux
 
 On macOS and Linux you can use the command-line tools CMake and Make to compile the game.
 
 Compile the game by running `cmake .` followed by `make`.
 
-## Windows
+### Windows
 
 On Windows you can use Visual Studio to compile the game.
 
