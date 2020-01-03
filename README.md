@@ -3,6 +3,8 @@
 Small Blocks is a 3D building game where the player can shrink and grow to build creations of any size.
 You can build with extremely large blocks, extremely small blocks, or why not something in between.
 
+![](Small_Blocks.png)
+
 ## Controls
 
 - Move player with the mouse and `W` `A` `S` `D`
