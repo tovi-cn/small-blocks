@@ -33,8 +33,9 @@ option(freetype-gl_BUILD_MAKEFONT "Build the makefont tool" ON)
 option(freetype-gl_BUILD_TESTS "Build the tests" ON)
 
 # XXX: Force disable options.
-set(freetype-gl_BUILD_APIDOC OFF)
 set(freetype-gl_BUILD_DEMOS OFF)
+set(freetype-gl_BUILD_APIDOC OFF)
+set(freetype-gl_BUILD_MAKEFONT OFF)
 set(freetype-gl_BUILD_TESTS OFF)
 
 include(RequireIncludeFile)

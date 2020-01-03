@@ -10,7 +10,6 @@
 #include "glm/mat4x4.hpp"
 
 #include "fractals.h"
-#include "text.h"
 #include "utilities.h"
 
 static const char *kVertexShaderText =
@@ -40,7 +39,9 @@ Game::Game()
       mouse_last_x_(0.0), mouse_last_y_(0.0),
       wireframe_(false),
       camera_position_(0.0f), camera_rotation_(0.0f),
-      size_dimension_(kDefaultSizeDimension), speed_(0),
+      size_dimension_(kDefaultSizeDimension),
+      block_dimension_(kDefaultBlockDimension),
+      speed_(0),
       world_() {}
 
 Game::~Game() {
@@ -101,7 +102,8 @@ bool Game::Initialize() {
 
   // Camera position
 
-  camera_position_ = glm::vec3(kWorldSize / 2.0f, kWorldSize / 2 + 1.5f, -2.5f);
+  camera_position_ =
+      glm::vec3(kWorldSize / 2.0f, kWorldSize / 2 + 1.5f, -kWorldSize / 2.0f);
   camera_rotation_.y = glm::radians(-180.0f);
 
   // Generate geometry
@@ -161,10 +163,10 @@ bool Game::Initialize() {
   // Create world
 
   world_ = new Block();
-  world_->set_child(0, new Block(1));
-  world_->set_child(1, new Block(1));
-  world_->set_child(4, new Block(1));
-  world_->set_child(5, new Block(1));
+  world_->set_child(2, new Block(1));
+  world_->set_child(3, new Block(1));
+  world_->set_child(6, new Block(1));
+  world_->set_child(7, new Block(1));
 
   SetBlock(kWorldSize / 2.0f, kWorldSize / 2.0f, kWorldSize / 2.0f, 16, 0);
 
@@ -245,12 +247,12 @@ void Game::Update(float delta_time) {
 }
 
 void Game::PlaceBlock() {
-  SetBlock(camera_position_.x, camera_position_.y, kWorldSize / 2.0f,
+  SetBlock(camera_position_.x, camera_position_.y, 0.0f,
            block_dimension_, 1);
 }
 
 void Game::BreakBlock() {
-  SetBlock(camera_position_.x, camera_position_.y, kWorldSize / 2.0f,
+  SetBlock(camera_position_.x, camera_position_.y, 0.0f,
            block_dimension_, 0);
 }
 
@@ -379,12 +381,12 @@ void Game::GrowSize() {
 
 void Game::ShrinkBlock() {
   ++block_dimension_;
-  block_dimension_ = glm::min(block_dimension_, kMinSizeDimension);
+  block_dimension_ = glm::min(block_dimension_, kMinBlockDimension);
 }
 
 void Game::GrowBlock() {
   --block_dimension_;
-  block_dimension_ = glm::max(block_dimension_, kMaxSizeDimension);
+  block_dimension_ = glm::max(block_dimension_, kMaxBlockDimension);
 }
 
 void Game::Render() {
