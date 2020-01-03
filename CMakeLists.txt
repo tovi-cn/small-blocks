@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 
-project(recurse-builder)
+project(small-blocks)
 
 set(freetype-gl_BUILD_DEMOS OFF CACHE BOOL "")
 set(freetype-gl_BUILD_APIDOC OFF CACHE BOOL "")
@@ -30,7 +30,7 @@ else()
   add_compile_options(-Wall -Wextra)
 endif()
 
-add_executable(recurse-builder
+add_executable(small-blocks
   src/block.cc
   src/fractals.cc
   src/game.cc
@@ -38,7 +38,7 @@ add_executable(recurse-builder
   src/main.cc
   src/utilities.cc
   )
-target_link_libraries(recurse-builder
+target_link_libraries(small-blocks
   freetype-gl
   glad
   glfw

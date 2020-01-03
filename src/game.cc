@@ -42,8 +42,7 @@ static const char *kVertexShaderText =
 "  if (vNormal.z == -1) {\n"
 "    color *= .5;\n"
 "  }\n"
-"  // color = vCol;\n"
-"  // color = vPos;\n"
+"  // TODO: color = vCol;\n"
 "}\n";
 
 static const char *kFragmentShaderText =
@@ -96,7 +95,7 @@ bool Game::Initialize() {
   }
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-  window_ = glfwCreateWindow(800, 600, "Recurse Builder", NULL, NULL);
+  window_ = glfwCreateWindow(800, 600, "Small Blocks", NULL, NULL);
   if (!window_) {
     glfwTerminate();
     return false;
@@ -272,7 +271,7 @@ void Game::Update(float delta_time) {
       glm::clamp(player_position_.z, -kWorldSize, 2 * kWorldSize);
 
   camera_position_ = player_position_;
-  // float player_height = glm::pow(2.0f, -size_dimension_);
+  // TODO: float player_height = glm::pow(2.0f, -size_dimension_);
   float player_height = 1.0f;
   camera_position_.y += player_height;
   camera_rotation_ = player_rotation_;
