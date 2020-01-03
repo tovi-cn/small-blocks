@@ -1,10 +1,6 @@
-Keybindings to change the size of the player by a factor of 2.
-  This changes the size of the block as well.
-  Avoid shrinking blocks below floating precision limit.
-
-Change between different types of blocks.
-
+Place and destroy blocks in the current dimension.
 Highlight where the block will be placed.
+Change between different types of blocks.
 
 ---
 
@@ -16,3 +12,4 @@ Add background fog when shrinking to cover up render distance.
 Sound effects when building and changing size.
 Background music.
 Main menu.
+Shrink even smaller, though avoid shrinking below floating precision limit.

@@ -16,7 +16,14 @@
 class Game {
  public:
   static constexpr float kWorldSize = 10;
-  static constexpr float kDefaultSpeed = 0.5f;
+
+  static constexpr int kMaxSizeDimension = -1;
+  static constexpr int kMinSizeDimension = 8;
+  static constexpr int kDefaultSizeDimension = 1;
+
+  static constexpr int kMaxBlockDimension = 0;
+  static constexpr int kMinBlockDimension = 16;
+  static constexpr int kDefaultBlockDimension = 1;
 
   Game();
   ~Game();
@@ -24,9 +31,15 @@ class Game {
   bool Initialize();
   void Run();
 
+  void PlaceBlock();
+  void BreakBlock();
+  int GetBlock(float x, float y, float z);
   void SetBlock(float x, float y, float z, int dimension, int value);
-  void Shrink();
-  void Grow();
+
+  void ShrinkSize();
+  void GrowSize();
+  void ShrinkBlock();
+  void GrowBlock();
 
   void MouseDown(int button);
   void MouseUp(int button);
@@ -45,7 +58,7 @@ class Game {
                                  int action, int mods);
   static void OnKeyEvent(GLFWwindow *window, int key, int scancode,
                          int action, int mods);
-  static void OnGlfwError(int error, const char* description);
+  static void OnGlfwError(int error, const char *description);
   static void GLAPIENTRY OnGlError(GLenum source,
                                    GLenum type,
                                    GLuint id,
@@ -65,6 +78,8 @@ class Game {
   glm::vec3 camera_position_;
   glm::vec3 camera_rotation_;
 
+  int size_dimension_;
+  int block_dimension_;
   float speed_;
 
   Block *world_;

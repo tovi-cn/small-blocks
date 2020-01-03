@@ -10,6 +10,7 @@
 #include "glm/mat4x4.hpp"
 
 #include "fractals.h"
+#include "text.h"
 #include "utilities.h"
 
 static const char *kVertexShaderText =
@@ -39,7 +40,7 @@ Game::Game()
       mouse_last_x_(0.0), mouse_last_y_(0.0),
       wireframe_(false),
       camera_position_(0.0f), camera_rotation_(0.0f),
-      speed_(kDefaultSpeed),
+      size_dimension_(kDefaultSizeDimension), speed_(0),
       world_() {}
 
 Game::~Game() {
@@ -162,22 +163,10 @@ bool Game::Initialize() {
   world_ = new Block();
   world_->set_child(0, new Block(1));
   world_->set_child(1, new Block(1));
-  world_->set_child(2, new Block(1));
-  world_->set_child(3, new Block(1));
+  world_->set_child(4, new Block(1));
+  world_->set_child(5, new Block(1));
 
-  SetBlock(5.0f, 5.0f, 5.0f, 16, 0);
-
-  // for (int i = 3; i <= 10; ++i) {
-  //   for (int j = 0; j < i * 1; ++j) {
-  //     float x = kWorldSize * RandomFloat();
-  //     float y = kWorldSize * RandomFloat();
-  //     float z = kWorldSize * RandomFloat();
-  //     SetBlock(x, y, z, i, 0);
-  //   }
-  // }
-
-  world_->set_value(0);
-  // SimpleFractal(world_, 16);
+  SetBlock(kWorldSize / 2.0f, kWorldSize / 2.0f, kWorldSize / 2.0f, 16, 0);
 
   return true;
 }
@@ -206,6 +195,8 @@ void Game::Update(float delta_time) {
   float mouse_delta_y = static_cast<float>(mouse_y - mouse_last_y_);
   mouse_last_x_ = mouse_x;
   mouse_last_y_ = mouse_y;
+
+  speed_ = glm::pow(2.0f, -size_dimension_);
 
   if (window_focused_) {
     float mouse_sensitivity = 0.005f;
@@ -245,9 +236,78 @@ void Game::Update(float delta_time) {
     }
   }
 
-  camera_position_.x = glm::clamp(camera_position_.x, -kWorldSize, 2 * kWorldSize);
-  camera_position_.y = glm::clamp(camera_position_.y, -kWorldSize, 2 * kWorldSize);
-  camera_position_.z = glm::clamp(camera_position_.z, -kWorldSize, 2 * kWorldSize);
+  camera_position_.x =
+      glm::clamp(camera_position_.x, -kWorldSize, 2 * kWorldSize);
+  camera_position_.y =
+      glm::clamp(camera_position_.y, -kWorldSize, 2 * kWorldSize);
+  camera_position_.z =
+      glm::clamp(camera_position_.z, -kWorldSize, 2 * kWorldSize);
+}
+
+void Game::PlaceBlock() {
+  SetBlock(camera_position_.x, camera_position_.y, kWorldSize / 2.0f,
+           block_dimension_, 1);
+}
+
+void Game::BreakBlock() {
+  SetBlock(camera_position_.x, camera_position_.y, kWorldSize / 2.0f,
+           block_dimension_, 0);
+}
+
+int Game::GetBlock(float x, float y, float z) {
+  Block *block = world_;
+  float size = kWorldSize;
+  float dx = 0.0f;
+  float dy = 0.0f;
+  float dz = 0.0f;
+
+  for (int i = 0; ; ++i) {
+    if (block->is_leaf()) {
+      return block->value();
+    }
+
+    size /= 2.0f;
+    float center_x = size + dx;
+    float center_y = size + dy;
+    float center_z = size + dz;
+
+    int index = 0;
+    if        (x  < center_x && y >= center_y && z >= center_z) {
+      index = 0;
+      dy += size;
+      dz += size;
+    } else if (x >= center_x && y >= center_y && z >= center_z) {
+      index = 1;
+      dx += size;
+      dy += size;
+      dz += size;
+    } else if (x  < center_x && y >= center_y && z  < center_z) {
+      index = 2;
+      dy += size;
+    } else if (x >= center_x && y >= center_y && z  < center_z) {
+      index = 3;
+      dx += size;
+      dy += size;
+    } else if (x  < center_x && y  < center_y && z >= center_z) {
+      index = 4;
+      dz += size;
+    } else if (x >= center_x && y  < center_y && z >= center_z) {
+      index = 5;
+      dx += size;
+      dz += size;
+    } else if (x  < center_x && y  < center_y && z  < center_z) {
+      index = 6;
+    } else if (x >= center_x && y  < center_y && z  < center_z) {
+      index = 7;
+      dx += size;
+    }
+
+    Block *child = block->child(index);
+    if (!child) {
+      return 0;
+    }
+    block = child;
+  }
 }
 
 void Game::SetBlock(float x, float y, float z, int dimension, int value) {
@@ -305,16 +365,26 @@ void Game::SetBlock(float x, float y, float z, int dimension, int value) {
   block->set_value(value);
 }
 
-void Game::Shrink() {
-  speed_ /= 2;
-  speed_ = glm::max(speed_, glm::pow(2.0f, -8.0f));
-  std::cout << "Speed: " << speed_ << "\n";
+
+
+void Game::ShrinkSize() {
+  ++size_dimension_;
+  size_dimension_ = glm::min(size_dimension_, kMinSizeDimension);
 }
 
-void Game::Grow() {
-  speed_ *= 2;
-  speed_ = glm::min(speed_, glm::pow(2.0f, 3.0f));
-  std::cout << "Speed: " << speed_ << "\n";
+void Game::GrowSize() {
+  --size_dimension_;
+  size_dimension_ = glm::max(size_dimension_, kMaxSizeDimension);
+}
+
+void Game::ShrinkBlock() {
+  ++block_dimension_;
+  block_dimension_ = glm::min(block_dimension_, kMinSizeDimension);
+}
+
+void Game::GrowBlock() {
+  --block_dimension_;
+  block_dimension_ = glm::max(block_dimension_, kMaxSizeDimension);
 }
 
 void Game::Render() {
@@ -388,8 +458,14 @@ void Game::DrawBlock(Block *block, float x, float y, float z, float size) {
 
 void Game::MouseDown(int button) {
   pressed_mouse_buttons_.set(button);
-
   FocusWindow();
+
+  if (button == GLFW_MOUSE_BUTTON_LEFT) {
+    BreakBlock();
+  }
+  if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+    PlaceBlock();
+  }
 }
 
 void Game::MouseUp(int button) {
@@ -400,11 +476,18 @@ void Game::KeyDown(int key) {
   pressed_keys_.set(key);
 
   if (key == GLFW_KEY_Q) {
-    Shrink();
+    ShrinkSize();
   }
   if (key == GLFW_KEY_E) {
-    Grow();
+    GrowSize();
   }
+  if (key == GLFW_KEY_Z) {
+    ShrinkBlock();
+  }
+  if (key == GLFW_KEY_C) {
+    GrowBlock();
+  }
+
   if (key == GLFW_KEY_G) {
     wireframe_ = !wireframe_;
     if (wireframe_) {

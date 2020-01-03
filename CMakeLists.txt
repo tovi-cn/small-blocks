@@ -2,11 +2,22 @@ cmake_minimum_required(VERSION 3.0)
 
 project(recurse-builder)
 
+set(freetype-gl_BUILD_APIDOC OFF CACHE BOOL "")
+set(freetype-gl_BUILD_DEMOS OFF CACHE BOOL "")
+set(freetype-gl_BUILD_TESTS OFF CACHE BOOL "")
+add_subdirectory(dependencies/freetype-gl)
+
 add_subdirectory(dependencies/glad)
+
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "")
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "")
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "")
 add_subdirectory(dependencies/glfw)
+
 set(GLM_TEST_ENABLE OFF CACHE BOOL "")
 add_subdirectory(dependencies/glm)
 
+include_directories(dependencies/freetype-gl)
 include_directories(dependencies/glm)
 include_directories(dependencies/glad/include)
 include_directories(dependencies/glfw/include)
@@ -20,10 +31,16 @@ endif()
 
 add_executable(recurse-builder
   src/block.cc
+  src/fractals.cc
   src/game.cc
   src/geometry.cc
   src/main.cc
+  src/text.cc
   src/utilities.cc
   )
-target_link_libraries(recurse-builder glad)
-target_link_libraries(recurse-builder glfw ${GLFW_LIBRARIES})
+target_link_libraries(recurse-builder
+  freetype-gl
+  glad
+  glfw
+  ${GLFW_LIBRARIES}
+  )
