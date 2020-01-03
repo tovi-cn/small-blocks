@@ -12,6 +12,11 @@ You can build with extremely large blocks, extremely small blocks, or why not so
 - Shrink player with `Q` and grow player with `E`
 - Shrink block with `Z` and grow block with `C`
 
+Other controls:
+
+- Regenerate the world with `R`
+- Toggle wireframe mode with `G`
+
 # Compiling
 
 ## macOS and Linux
