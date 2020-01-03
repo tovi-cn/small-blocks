@@ -16,13 +16,34 @@ static const char *kVertexShaderText =
 "#version 330 core\n"
 "uniform mat4 uViewProjection;\n"
 "uniform mat4 uModel;\n"
+"uniform vec3 uColor;\n"
 "layout (location = 0) in vec3 vPos;\n"
-"layout (location = 1) in vec3 vCol;\n"
+"layout (location = 1) in vec3 vNormal;\n"
+"layout (location = 2) in vec3 vCol;\n"
 "out vec3 color;\n"
 "void main() {\n"
 "  gl_Position = uViewProjection * uModel * vec4(vPos, 1.0);\n"
+"  color = uColor;\n"
+"  if (vNormal.x == 1) {\n"
+"    color *= .65;\n"
+"  }\n"
+"  if (vNormal.x == -1) {\n"
+"    color *= .65;\n"
+"  }\n"
+"  if (vNormal.y == 1) {\n"
+"    color *= 1;\n"
+"  }\n"
+"  if (vNormal.y == -1) {\n"
+"    color *= .25;\n"
+"  }\n"
+"  if (vNormal.z == 1) {\n"
+"    color *= .5;\n"
+"  }\n"
+"  if (vNormal.z == -1) {\n"
+"    color *= .5;\n"
+"  }\n"
 "  // color = vCol;\n"
-"  color = vPos;\n"
+"  // color = vPos;\n"
 "}\n";
 
 static const char *kFragmentShaderText =
@@ -39,9 +60,14 @@ Game::Game()
       mouse_last_x_(0.0), mouse_last_y_(0.0),
       wireframe_(false),
       camera_position_(0.0f), camera_rotation_(0.0f),
+      player_position_(0.0f), player_rotation_(0.0f),
       size_dimension_(kDefaultSizeDimension),
       block_dimension_(kDefaultBlockDimension),
       speed_(0),
+      color_(kDefaultColor),
+      breaking_(false),
+      placing_(false),
+      last_block_time_(0),
       world_() {}
 
 Game::~Game() {
@@ -100,12 +126,6 @@ bool Game::Initialize() {
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
 
-  // Camera position
-
-  camera_position_ =
-      glm::vec3(kWorldSize / 2.0f, kWorldSize / 2 + 1.5f, -kWorldSize / 2.0f);
-  camera_rotation_.y = glm::radians(-180.0f);
-
   // Generate geometry
 
   vertices_ = kCubeVertices;
@@ -130,12 +150,18 @@ bool Game::Initialize() {
   // Position
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
-                        sizeof(vertices_[0]), reinterpret_cast<void *>(0));
-  // Color
+                        sizeof(vertices_[0]),
+                        reinterpret_cast<void *>(0));
+  // Normal
   glEnableVertexAttribArray(1);
   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
                         sizeof(vertices_[0]),
                         reinterpret_cast<void *>(3 * sizeof(float)));
+  // Color
+  glEnableVertexAttribArray(2);
+  glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
+                        sizeof(vertices_[0]),
+                        reinterpret_cast<void *>(6 * sizeof(float)));
 
   glBindVertexArray(0);
 
@@ -159,16 +185,16 @@ bool Game::Initialize() {
 
   view_projection_location_ = glGetUniformLocation(program_, "uViewProjection");
   model_location_ = glGetUniformLocation(program_, "uModel");
+  color_location_ = glGetUniformLocation(program_, "uColor");
 
   // Create world
 
-  world_ = new Block();
-  world_->set_child(2, new Block(1));
-  world_->set_child(3, new Block(1));
-  world_->set_child(6, new Block(1));
-  world_->set_child(7, new Block(1));
+  GenerateWorld();
 
-  SetBlock(kWorldSize / 2.0f, kWorldSize / 2.0f, kWorldSize / 2.0f, 16, 0);
+  // Player
+
+  player_position_ =
+      glm::vec3(kWorldSize / 2.0f, kWorldSize / 2.0f, kWorldSize / 2.0f);
 
   return true;
 }
@@ -202,14 +228,14 @@ void Game::Update(float delta_time) {
 
   if (window_focused_) {
     float mouse_sensitivity = 0.005f;
-    camera_rotation_.x += -mouse_delta_y * mouse_sensitivity;
-    camera_rotation_.y += -mouse_delta_x * mouse_sensitivity;
-    camera_rotation_.x = glm::clamp(camera_rotation_.x, glm::radians(-90.0f),
-                                    glm::radians(90.0f));
+    player_rotation_.x += -mouse_delta_y * mouse_sensitivity;
+    player_rotation_.y += -mouse_delta_x * mouse_sensitivity;
+    player_rotation_.x = glm::clamp(player_rotation_.x, glm::radians(-89.99f),
+                                    glm::radians(89.99f));
 
-    glm::mat4 rotation(1.0f);
-    rotation = glm::rotate(camera_rotation_.y, glm::vec3(0.0f, 1.0f, 0.0f)) * rotation;
-    glm::vec3 forward = glm::vec3(rotation * glm::vec4(0.0f, 0.0f, -1.0f, 1.0f));
+    glm::vec3 forward = GetCameraForward();
+    forward.y = 0.0f;
+    forward = glm::normalize(forward);
     glm::vec3 up(0.0f, 1.0f, 0.0f);
     glm::vec3 right = glm::normalize(glm::cross(forward, up));
 
@@ -227,33 +253,141 @@ void Game::Update(float delta_time) {
       direction += right;
     }
     if (direction != glm::vec3(0.0f)) {
-      camera_position_ += glm::normalize(direction) * speed_ * delta_time;
+      player_position_ += glm::normalize(direction) * speed_ * delta_time;
     }
 
     if (pressed_keys_.test(GLFW_KEY_SPACE)) {
-      camera_position_ += up * speed_ * delta_time;
+      player_position_ += up * speed_ * delta_time;
     }
     if (pressed_keys_.test(GLFW_KEY_LEFT_SHIFT)) {
-      camera_position_ -= up * speed_ * delta_time;
+      player_position_ -= up * speed_ * delta_time;
     }
   }
 
-  camera_position_.x =
-      glm::clamp(camera_position_.x, -kWorldSize, 2 * kWorldSize);
-  camera_position_.y =
-      glm::clamp(camera_position_.y, -kWorldSize, 2 * kWorldSize);
-  camera_position_.z =
-      glm::clamp(camera_position_.z, -kWorldSize, 2 * kWorldSize);
+  player_position_.x =
+      glm::clamp(player_position_.x, -kWorldSize, 2 * kWorldSize);
+  player_position_.y =
+      glm::clamp(player_position_.y, -kWorldSize, 2 * kWorldSize);
+  player_position_.z =
+      glm::clamp(player_position_.z, -kWorldSize, 2 * kWorldSize);
+
+  camera_position_ = player_position_;
+  // float player_height = glm::pow(2.0f, -size_dimension_);
+  float player_height = 1.0f;
+  camera_position_.y += player_height;
+  camera_rotation_ = player_rotation_;
+
+  double time = glfwGetTime();
+  if (placing_ && time - last_block_time_ >= kBlockInterval) {
+    PlaceBlock();
+    last_block_time_ = time;
+  }
+  if (breaking_ && time - last_block_time_ >= kBlockInterval) {
+    BreakBlock();
+    last_block_time_ = time;
+  }
+}
+
+void Game::GenerateWorld() {
+  delete world_;
+  world_ = new Block();
+  world_->set_child(4, new Block(kColor2));
+  world_->set_child(5, new Block(kColor1));
+  world_->set_child(6, new Block(kColor3));
+  world_->set_child(7, new Block(kColor4));
 }
 
 void Game::PlaceBlock() {
-  SetBlock(camera_position_.x, camera_position_.y, 0.0f,
-           block_dimension_, 1);
+  RaycastHit hit = RaycastBlock();
+  if (hit.block) {
+    SetBlock(hit.previous_position.x, hit.previous_position.y,
+             hit.previous_position.z, block_dimension_, color_);
+  }
 }
 
 void Game::BreakBlock() {
-  SetBlock(camera_position_.x, camera_position_.y, 0.0f,
-           block_dimension_, 0);
+  RaycastHit hit = RaycastBlock();
+  if (hit.block) {
+    hit.block->set_value(kNoValue);
+  }
+}
+
+Game::RaycastHit Game::RaycastBlock() {
+  RaycastHit hit;
+  hit.block = nullptr;
+  hit.previous_block = nullptr;
+  hit.position = camera_position_;
+  hit.previous_position = hit.position;
+  glm::vec3 direction = GetCameraForward();
+
+  for (int i = 0; i < 5000; ++i) {
+    hit.previous_block = hit.block;
+    hit.block = GetBlockNode(hit.position.x, hit.position.y, hit.position.z,
+                             block_dimension_);
+    if (!hit.block->is_leaf() || hit.block->value() != kNoValue) {
+      break;
+    }
+    hit.previous_position = hit.position;
+    float step_size = glm::pow(2.0f, static_cast<float>(-block_dimension_));
+    hit.position += direction * step_size;
+  }
+
+  return hit;
+}
+
+Block *Game::GetBlockNode(float x, float y, float z, int dimension) {
+  Block *block = world_;
+  float size = kWorldSize;
+  float dx = 0.0f;
+  float dy = 0.0f;
+  float dz = 0.0f;
+
+  for (int i = 0; i < dimension; ++i) {
+    size /= 2.0f;
+    float center_x = size + dx;
+    float center_y = size + dy;
+    float center_z = size + dz;
+
+    int index = 0;
+    if        (x  < center_x && y >= center_y && z >= center_z) {
+      index = 0;
+      dy += size;
+      dz += size;
+    } else if (x >= center_x && y >= center_y && z >= center_z) {
+      index = 1;
+      dx += size;
+      dy += size;
+      dz += size;
+    } else if (x  < center_x && y >= center_y && z  < center_z) {
+      index = 2;
+      dy += size;
+    } else if (x >= center_x && y >= center_y && z  < center_z) {
+      index = 3;
+      dx += size;
+      dy += size;
+    } else if (x  < center_x && y  < center_y && z >= center_z) {
+      index = 4;
+      dz += size;
+    } else if (x >= center_x && y  < center_y && z >= center_z) {
+      index = 5;
+      dx += size;
+      dz += size;
+    } else if (x  < center_x && y  < center_y && z  < center_z) {
+      index = 6;
+    } else if (x >= center_x && y  < center_y && z  < center_z) {
+      index = 7;
+      dx += size;
+    }
+
+    Block *child = block->child(index);
+    if (!child) {
+      child = new Block(block->value());
+      block->set_child(index, child);
+    }
+    block = child;
+  }
+
+  return block;
 }
 
 int Game::GetBlock(float x, float y, float z) {
@@ -313,61 +447,10 @@ int Game::GetBlock(float x, float y, float z) {
 }
 
 void Game::SetBlock(float x, float y, float z, int dimension, int value) {
-  Block *block = world_;
-  float size = kWorldSize;
-  float dx = 0.0f;
-  float dy = 0.0f;
-  float dz = 0.0f;
-
-  for (int i = 0; i < dimension; ++i) {
-    size /= 2.0f;
-    float center_x = size + dx;
-    float center_y = size + dy;
-    float center_z = size + dz;
-
-    int index = 0;
-    if        (x  < center_x && y >= center_y && z >= center_z) {
-      index = 0;
-      dy += size;
-      dz += size;
-    } else if (x >= center_x && y >= center_y && z >= center_z) {
-      index = 1;
-      dx += size;
-      dy += size;
-      dz += size;
-    } else if (x  < center_x && y >= center_y && z  < center_z) {
-      index = 2;
-      dy += size;
-    } else if (x >= center_x && y >= center_y && z  < center_z) {
-      index = 3;
-      dx += size;
-      dy += size;
-    } else if (x  < center_x && y  < center_y && z >= center_z) {
-      index = 4;
-      dz += size;
-    } else if (x >= center_x && y  < center_y && z >= center_z) {
-      index = 5;
-      dx += size;
-      dz += size;
-    } else if (x  < center_x && y  < center_y && z  < center_z) {
-      index = 6;
-    } else if (x >= center_x && y  < center_y && z  < center_z) {
-      index = 7;
-      dx += size;
-    }
-
-    Block *child = block->child(index);
-    if (!child) {
-      child = new Block(block->value());
-      block->set_child(index, child);
-    }
-    block = child;
-  }
-
+  Block *block = GetBlockNode(x, y, z, dimension);
   block->set_value(value);
+  world_->Simplify();
 }
-
-
 
 void Game::ShrinkSize() {
   ++size_dimension_;
@@ -389,6 +472,10 @@ void Game::GrowBlock() {
   block_dimension_ = glm::max(block_dimension_, kMaxBlockDimension);
 }
 
+void Game::SetColor(int color) {
+  color_ = color;
+}
+
 void Game::Render() {
   int width;
   int height;
@@ -404,11 +491,7 @@ void Game::Render() {
   glm::mat4 projection_matrix =
       glm::perspective(glm::radians(fov), aspect, near, far);
 
-  glm::mat4 view_matrix(1.0f);
-  view_matrix = glm::translate(-camera_position_) * view_matrix;
-  view_matrix = glm::rotate(-camera_rotation_.y, glm::vec3(0.0f, 1.0f, 0.0f)) * view_matrix;
-  view_matrix = glm::rotate(-camera_rotation_.x, glm::vec3(1.0f, 0.0f, 0.0f)) * view_matrix;
-  view_matrix = glm::scale(glm::vec3(1.0f / speed_)) * view_matrix;
+  glm::mat4 view_matrix = GetCameraViewMatrix();
 
   glm::mat4 view_projection_matrix = projection_matrix * view_matrix;
 
@@ -426,7 +509,7 @@ void Game::DrawBlock(Block *block, float x, float y, float z, float size) {
   if (!block) {
     return;
   }
-  if (block->value()) {
+  if (block->value() != kNoValue) {
     glm::mat4 model_matrix(1.0f);
     model_matrix = glm::scale(glm::vec3(size)) * model_matrix;
     model_matrix = glm::translate(glm::vec3(x, y, z)) * model_matrix;
@@ -434,6 +517,13 @@ void Game::DrawBlock(Block *block, float x, float y, float z, float size) {
     glUseProgram(program_);
     glUniformMatrix4fv(model_location_, 1, GL_FALSE,
                        static_cast<const GLfloat *>(&model_matrix[0][0]));
+    glUseProgram(0);
+
+    glUseProgram(program_);
+    float r = static_cast<float>((block->value() >> 16) & 0xff) / 0xff;
+    float g = static_cast<float>((block->value() >> 8) & 0xff) / 0xff;
+    float b = static_cast<float>(block->value() & 0xff) / 0xff;
+    glUniform3f(color_location_, r, g, b);
     glUseProgram(0);
 
     glUseProgram(program_);
@@ -458,20 +548,50 @@ void Game::DrawBlock(Block *block, float x, float y, float z, float size) {
   }
 }
 
+glm::vec3 Game::GetCameraForward() const {
+  glm::mat4 rotation(1.0f);
+  rotation = glm::rotate(camera_rotation_.x, glm::vec3(1.0f, 0.0f, 0.0f)) * rotation;
+  rotation = glm::rotate(camera_rotation_.y, glm::vec3(0.0f, 1.0f, 0.0f)) * rotation;
+  glm::vec3 forward = glm::vec3(rotation * glm::vec4(0.0f, 0.0f, -1.0f, 1.0f));
+  return forward;
+}
+
+glm::mat4 Game::GetCameraViewMatrix() const {
+  glm::mat4 matrix(1.0f);
+  matrix = glm::translate(-camera_position_) * matrix;
+  matrix = glm::rotate(-camera_rotation_.y, glm::vec3(0.0f, 1.0f, 0.0f)) * matrix;
+  matrix = glm::rotate(-camera_rotation_.x, glm::vec3(1.0f, 0.0f, 0.0f)) * matrix;
+  matrix = glm::scale(glm::vec3(1.0f / speed_)) * matrix;
+  return matrix;
+}
+
 void Game::MouseDown(int button) {
   pressed_mouse_buttons_.set(button);
   FocusWindow();
 
   if (button == GLFW_MOUSE_BUTTON_LEFT) {
     BreakBlock();
+    breaking_ = true;
+    placing_ = false;
+    last_block_time_ = glfwGetTime();
   }
   if (button == GLFW_MOUSE_BUTTON_RIGHT) {
     PlaceBlock();
+    placing_ = true;
+    breaking_ = false;
+    last_block_time_ = glfwGetTime();
   }
 }
 
 void Game::MouseUp(int button) {
   pressed_mouse_buttons_.reset(button);
+
+  if (button == GLFW_MOUSE_BUTTON_LEFT) {
+    breaking_ = false;
+  }
+  if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+    placing_ = false;
+  }
 }
 
 void Game::KeyDown(int key) {
@@ -488,6 +608,26 @@ void Game::KeyDown(int key) {
   }
   if (key == GLFW_KEY_C) {
     GrowBlock();
+  }
+
+  if (key == GLFW_KEY_1) {
+    SetColor(kColor1);
+  }
+  if (key == GLFW_KEY_2) {
+    SetColor(kColor2);
+  }
+  if (key == GLFW_KEY_3) {
+    SetColor(kColor3);
+  }
+  if (key == GLFW_KEY_4) {
+    SetColor(kColor4);
+  }
+  if (key == GLFW_KEY_5) {
+    SetColor(kColor5);
+  }
+
+  if (key == GLFW_KEY_R) {
+    GenerateWorld();
   }
 
   if (key == GLFW_KEY_G) {

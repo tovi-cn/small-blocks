@@ -15,15 +15,32 @@
 
 class Game {
  public:
+  struct RaycastHit {
+    Block *block;
+    Block *previous_block;
+    glm::vec3 position;
+    glm::vec3 previous_position;
+  };
+
   static constexpr float kWorldSize = 10;
 
   static constexpr int kMaxSizeDimension = -1;
   static constexpr int kMinSizeDimension = 8;
-  static constexpr int kDefaultSizeDimension = 1;
+  static constexpr int kDefaultSizeDimension = 0;
 
-  static constexpr int kMaxBlockDimension = 0;
+  static constexpr int kMaxBlockDimension = 1;
   static constexpr int kMinBlockDimension = 16;
-  static constexpr int kDefaultBlockDimension = 1;
+  static constexpr int kDefaultBlockDimension = 4;
+
+  static constexpr int kNoValue = 0x000000;  // Should always equal to 0.
+  static constexpr int kColor1 = 0xeeeeee;   // White
+  static constexpr int kColor2 = 0xea4611;   // Red
+  static constexpr int kColor3 = 0x25e10e;   // Green
+  static constexpr int kColor4 = 0x296fff;   // Blue
+  static constexpr int kColor5 = 0xf9dd07;   // Yellow
+  static constexpr int kDefaultColor = kColor1;
+
+  static constexpr double kBlockInterval = 0.25;
 
   Game();
   ~Game();
@@ -31,8 +48,12 @@ class Game {
   bool Initialize();
   void Run();
 
+  void GenerateWorld();
+
   void PlaceBlock();
   void BreakBlock();
+  RaycastHit RaycastBlock();
+  Block *GetBlockNode(float x, float y, float z, int dimension);
   int GetBlock(float x, float y, float z);
   void SetBlock(float x, float y, float z, int dimension, int value);
 
@@ -40,6 +61,7 @@ class Game {
   void GrowSize();
   void ShrinkBlock();
   void GrowBlock();
+  void SetColor(int color);
 
   void MouseDown(int button);
   void MouseUp(int button);
@@ -50,6 +72,9 @@ class Game {
   void Update(float delta_time);
   void Render();
   void DrawBlock(Block *block, float x, float y, float z, float size);
+
+  glm::vec3 GetCameraForward() const;
+  glm::mat4 GetCameraViewMatrix() const;
 
   void FocusWindow();
   void UnfocusWindow();
@@ -78,9 +103,15 @@ class Game {
   glm::vec3 camera_position_;
   glm::vec3 camera_rotation_;
 
+  glm::vec3 player_position_;
+  glm::vec3 player_rotation_;
   int size_dimension_;
   int block_dimension_;
   float speed_;
+  int color_;
+  bool placing_;
+  bool breaking_;
+  double last_block_time_;
 
   Block *world_;
 
@@ -93,6 +124,7 @@ class Game {
   GLuint program_;
   GLuint view_projection_location_;
   GLuint model_location_;
+  GLuint color_location_;
 };
 
 #endif  // GAME_H_
