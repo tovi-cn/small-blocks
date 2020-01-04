@@ -2,11 +2,12 @@ cmake_minimum_required(VERSION 3.0)
 
 project(small-blocks)
 
-set(freetype-gl_BUILD_DEMOS OFF CACHE BOOL "")
-set(freetype-gl_BUILD_APIDOC OFF CACHE BOOL "")
-set(freetype-gl_BUILD_MAKEFONT OFF CACHE BOOL "")
-set(freetype-gl_BUILD_TESTS OFF CACHE BOOL "")
-add_subdirectory(dependencies/freetype-gl)
+# TODO: Build with freetype-gl
+# set(freetype-gl_BUILD_DEMOS OFF CACHE BOOL "")
+# set(freetype-gl_BUILD_APIDOC OFF CACHE BOOL "")
+# set(freetype-gl_BUILD_MAKEFONT OFF CACHE BOOL "")
+# set(freetype-gl_BUILD_TESTS OFF CACHE BOOL "")
+# add_subdirectory(dependencies/freetype-gl)
 
 add_subdirectory(dependencies/glad)
 
