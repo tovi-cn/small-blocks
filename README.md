@@ -7,7 +7,8 @@ You can build with extremely large blocks, extremely small blocks, or why not so
 
 ## Controls
 
-- Move player with the mouse and `W` `A` `S` `D`
+- Move with mouse and `W` `A` `S` `D`
+- Go up with `SPACE` and down with `SHIFT`
 - Left click to break a block
 - Right click to place a block
 - Select block color with `1` - `5`
