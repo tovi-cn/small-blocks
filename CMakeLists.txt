@@ -39,7 +39,6 @@ add_executable(small-blocks
   src/utilities.cc
   )
 target_link_libraries(small-blocks
-  freetype-gl
   glad
   glfw
   ${GLFW_LIBRARIES}
