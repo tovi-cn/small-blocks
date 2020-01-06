@@ -1,15 +1,15 @@
 // Copyright (C) 2020 Carl Enlund
-// 
+//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
-// 
+//
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
@@ -62,7 +62,7 @@ static const char *kFragmentShaderText =
 "  gl_FragColor = vec4(color, 1.0);\n"
 "}\n";
 
-Game::Game() 
+Game::Game()
     : window_(nullptr), window_focused_(false),
       pressed_keys_(),
       mouse_last_x_(0.0), mouse_last_y_(0.0),
@@ -155,7 +155,7 @@ bool Game::Initialize() {
 
   glGenBuffers(1, &element_buffer_);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, element_buffer_);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices_.size() * sizeof(indices_[0]), 
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices_.size() * sizeof(indices_[0]),
                &indices_[0], GL_STATIC_DRAW);
 
   // Vertex attributes
@@ -194,7 +194,7 @@ bool Game::Initialize() {
 
   glGenBuffers(1, &highlight_element_buffer_);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, highlight_element_buffer_);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, highlight_indices_.size() * sizeof(highlight_indices_[0]), 
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, highlight_indices_.size() * sizeof(highlight_indices_[0]),
                &highlight_indices_[0], GL_STATIC_DRAW);
 
   // Vertex attributes
