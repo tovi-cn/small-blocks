@@ -9,15 +9,16 @@ You can build with extremely large blocks, extremely small blocks, or why not so
 
 - Move with mouse and `W` `A` `S` `D`
 - Go up with `SPACE` and down with `SHIFT`
-- Left click to break a block
-- Right click to place a block
+- Left click to break block
+- Right click to place block
 - Select block color with `1` - `5`
 - Shrink player with `Q` and grow player with `E`
 - Shrink block with `Z` and grow block with `C`
 
 Other controls:
 
-- Regenerate the world with `R`
+- Middle click to copy block
+- Regenerate world with `R`
 - Toggle wireframe mode with `G`
 
 ## Compiling
