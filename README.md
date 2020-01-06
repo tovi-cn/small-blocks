@@ -35,3 +35,10 @@ On Windows you can use Visual Studio to compile the game.
 
 To compile with Visual Studio, open the project as a "local folder",
 then select `small-blocks.exe` as the build target, and lastly build the project.
+
+To make sure the executable runs in the correct directory, open `launch.vs.json` under the `.vs` directory
+and add the following line in `configurations`:
+
+```
+"currentDir": "${workspaceRoot}"
+```

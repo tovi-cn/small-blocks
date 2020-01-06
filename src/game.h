@@ -127,6 +127,7 @@ class Game {
   int color_;
   bool placing_;
   bool breaking_;
+  double block_interval_;
   double last_block_time_;
   RayCastHit ray_cast_hit_;
 
@@ -143,6 +144,8 @@ class Game {
   GLuint highlight_vertex_array_;
   GLuint highlight_vertex_buffer_;
   GLuint highlight_element_buffer_;
+
+  GLuint texture_;
 
   GLuint program_;
   GLuint view_projection_location_;

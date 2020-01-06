@@ -23,6 +23,7 @@
 #include "glm/gtx/transform.hpp"
 #include "glm/vec3.hpp"
 #include "glm/mat4x4.hpp"
+#include "stb_image.h"
 
 #include "fractals.h"
 #include "utilities.h"
@@ -35,10 +36,11 @@ static const char *kVertexShaderText =
 "layout (location = 0) in vec3 vPos;\n"
 "layout (location = 1) in vec3 vNormal;\n"
 "layout (location = 2) in vec3 vCol;\n"
+"layout (location = 3) in vec2 vTexCoord;\n"
 "out vec3 color;\n"
+"out vec2 texCoord;\n"
 "void main() {\n"
 "  gl_Position = uViewProjection * uModel * vec4(vPos, 1.0);\n"
-"  color = uColor;\n"
 "  if (vNormal.x == 1 || vNormal.x == -1) {\n"
 "    color *= .65;\n"
 "  }\n"
@@ -51,15 +53,19 @@ static const char *kVertexShaderText =
 "  if (vNormal.z == 1 || vNormal.z == -1) {\n"
 "    color *= .5;\n"
 "  }\n"
+"  color = uColor;\n"
 "  // TODO: color = vCol;\n"
+"  texCoord = vTexCoord;\n"
 "}\n";
 
 static const char *kFragmentShaderText =
 "#version 330 core\n"
+"uniform sampler2D texture;\n"
 "in vec3 color;\n"
+"in vec2 texCoord;\n"
 "out vec4 FragColor;\n"
 "void main() {\n"
-"  gl_FragColor = vec4(color, 1.0);\n"
+"  gl_FragColor = texture(texture, texCoord) * color;\n"
 "}\n";
 
 Game::Game()
@@ -75,7 +81,7 @@ Game::Game()
       color_(kDefaultColor),
       breaking_(false),
       placing_(false),
-      last_block_time_(0),
+      block_interval_(kBlockInterval), last_block_time_(0),
       ray_cast_hit_(),
       world_() {}
 
@@ -88,6 +94,8 @@ Game::~Game() {
   glDeleteVertexArrays(1, &highlight_vertex_array_);
   glDeleteBuffers(1, &highlight_vertex_buffer_);
   glDeleteBuffers(1, &highlight_element_buffer_);
+
+  glDeleteTextures(1, &texture_);
 
   glDeleteProgram(program_);
 
@@ -177,6 +185,12 @@ bool Game::Initialize() {
                         sizeof(vertices_[0]),
                         reinterpret_cast<void *>(6 * sizeof(float)));
 
+  // Texture coordinate
+  glEnableVertexAttribArray(3);
+  glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE,
+                        sizeof(vertices_[0]),
+                        reinterpret_cast<void *>(9 * sizeof(float)));
+
   glBindVertexArray(0);
 
   // Generate highlight geometry
@@ -216,7 +230,43 @@ bool Game::Initialize() {
                         sizeof(highlight_vertices_[0]),
                         reinterpret_cast<void *>(6 * sizeof(float)));
 
+  // Texture coordinate
+  glEnableVertexAttribArray(3);
+  glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE,
+                        sizeof(vertices_[0]),
+                        reinterpret_cast<void *>(9 * sizeof(float)));
+
   glBindVertexArray(0);
+
+  // Load textures
+
+  glGenTextures(1, &texture_);
+  glBindTexture(GL_TEXTURE_2D, texture_);
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glGenerateMipmap(GL_TEXTURE_2D);
+
+  // Black/white checkerboard
+  float pixels[] = {
+    0.0f, 0.0f, 0.0f,  1.0f, 1.0f, 1.0f,
+    1.0f, 1.0f, 1.0f,  0.0f, 0.0f, 0.0f,
+  };
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, GL_FLOAT, pixels);
+
+  int image_width;
+  int image_height;
+  unsigned char *image_data =
+      stbi_load("assets/dirt.jpg", &image_width, &image_height, NULL, 3);
+  if (image_data) {
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image_width, image_height, 0,
+                 GL_RGB, GL_UNSIGNED_BYTE, image_data);
+    stbi_image_free(image_data);
+  } else {
+    std::cerr << "Failed to load texture.\n";
+  }
 
   // Load shaders
 
@@ -331,11 +381,11 @@ void Game::Update(float delta_time) {
   camera_rotation_ = player_rotation_;
 
   double time = glfwGetTime();
-  if (placing_ && time - last_block_time_ >= kBlockInterval) {
+  if (placing_ && time - last_block_time_ >= block_interval_) {
     PlaceBlock();
     last_block_time_ = time;
   }
-  if (breaking_ && time - last_block_time_ >= kBlockInterval) {
+  if (breaking_ && time - last_block_time_ >= block_interval_) {
     BreakBlock();
     last_block_time_ = time;
   }
