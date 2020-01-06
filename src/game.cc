@@ -368,10 +368,6 @@ void Game::BreakBlock() {
   }
 }
 
-double RoundToNearest(float n, float x) {
-  return glm::floor(n / x) * x;
-}
-
 Game::RayCastHit Game::RayCastBlock() {
   RayCastHit hit;
   hit.block = nullptr;
@@ -385,19 +381,19 @@ Game::RayCastHit Game::RayCastBlock() {
     hit.block = GetBlock(hit.position.x, hit.position.y, hit.position.z);
     if (hit.block &&
         (!hit.block->is_leaf() || hit.block->value() != kNoValue)) {
-      hit.position.x = RoundToNearest(
-          hit.position.x, kWorldSize * glm::pow(2.0f, -block_dimension_));
-      hit.position.y = RoundToNearest(
-          hit.position.y, kWorldSize * glm::pow(2.0f, -block_dimension_));
-      hit.position.z = RoundToNearest(
-          hit.position.z, kWorldSize * glm::pow(2.0f, -block_dimension_));
+      float block_size = kWorldSize * glm::pow(2.0f, -block_dimension_);
 
-      hit.previous_position.x = RoundToNearest(
-          hit.previous_position.x, kWorldSize * glm::pow(2.0f, -block_dimension_));
-      hit.previous_position.y = RoundToNearest(
-          hit.previous_position.y, kWorldSize * glm::pow(2.0f, -block_dimension_));
-      hit.previous_position.z = RoundToNearest(
-          hit.previous_position.z, kWorldSize * glm::pow(2.0f, -block_dimension_));
+      hit.position.x = FloorNearestMultiple(hit.position.x, block_size);
+      hit.position.y = FloorNearestMultiple(hit.position.y, block_size);
+      hit.position.z = FloorNearestMultiple(hit.position.z, block_size);
+
+      hit.previous_position.x =
+          FloorNearestMultiple(hit.previous_position.x, block_size);
+      hit.previous_position.y =
+          FloorNearestMultiple(hit.previous_position.y, block_size);
+      hit.previous_position.z =
+          FloorNearestMultiple(hit.previous_position.z, block_size);
+
       return hit;
     }
     hit.previous_position = hit.position;

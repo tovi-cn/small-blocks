@@ -16,7 +16,16 @@
 #ifndef UTILITIES_H_
 #define UTILITIES_H_
 
+#include <glm/glm.hpp>
+
 void SeedRandom();
-float RandomFloat();
+
+static float RandomFloat() {
+  return static_cast<float>(rand()) / RAND_MAX;
+}
+
+static float FloorNearestMultiple(float num, float multiple) {
+  return glm::floor(num / multiple) * multiple;
+}
 
 #endif  // UTILITIES_H_

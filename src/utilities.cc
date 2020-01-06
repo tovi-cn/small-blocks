@@ -21,7 +21,3 @@
 void SeedRandom() {
   srand(time(NULL));
 }
-
-float RandomFloat() {
-  return static_cast<float>(rand()) / RAND_MAX;
-}
