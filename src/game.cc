@@ -60,12 +60,12 @@ static const char *kVertexShaderText =
 
 static const char *kFragmentShaderText =
 "#version 330 core\n"
-"uniform sampler2D texture;\n"
+"uniform sampler2D uTexture;\n"
 "in vec3 color;\n"
 "in vec2 texCoord;\n"
 "out vec4 FragColor;\n"
 "void main() {\n"
-"  gl_FragColor = texture(texture, texCoord) * color;\n"
+"  FragColor = texture(uTexture, texCoord) * vec4(color, 1.0);\n"
 "}\n";
 
 Game::Game()
@@ -118,7 +118,7 @@ bool Game::Initialize() {
   }
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-  window_ = glfwCreateWindow(800, 600, "Small Blocks", NULL, NULL);
+  window_ = glfwCreateWindow(800, 600, "Small Blocks", nullptr, nullptr);
   if (!window_) {
     glfwTerminate();
     return false;
@@ -259,7 +259,7 @@ bool Game::Initialize() {
   int image_width;
   int image_height;
   unsigned char *image_data =
-      stbi_load("assets/dirt.jpg", &image_width, &image_height, NULL, 3);
+      stbi_load("assets/dirt.jpg", &image_width, &image_height, nullptr, 3);
   if (image_data) {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image_width, image_height, 0,
                  GL_RGB, GL_UNSIGNED_BYTE, image_data);
@@ -268,15 +268,41 @@ bool Game::Initialize() {
     std::cerr << "Failed to load texture.\n";
   }
 
+  glBindTexture(GL_TEXTURE_2D, 0);
+
   // Load shaders
 
   GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertex_shader, 1, &kVertexShaderText, NULL);
+  glShaderSource(vertex_shader, 1, &kVertexShaderText, nullptr);
   glCompileShader(vertex_shader);
 
+  GLint vertex_shader_compiled = 0;
+  glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &vertex_shader_compiled);
+  if (!vertex_shader_compiled) {
+    GLsizei log_length = 0;
+    glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &log_length);
+    GLchar *error_log = new GLchar[log_length];
+    glGetShaderInfoLog(vertex_shader, log_length, nullptr, error_log);
+    glDeleteShader(vertex_shader);
+    std::cerr << "Compile error: " << error_log << "\n";
+    delete error_log;
+  }
+
   GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragment_shader, 1, &kFragmentShaderText, NULL);
+  glShaderSource(fragment_shader, 1, &kFragmentShaderText, nullptr);
   glCompileShader(fragment_shader);
+
+  GLint fragment_shader_compiled = 0;
+  glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &fragment_shader_compiled);
+  if (!fragment_shader_compiled) {
+    GLsizei log_length = 0;
+    glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, &log_length);
+    GLchar *error_log = new GLchar[log_length];
+    glGetShaderInfoLog(fragment_shader, log_length, nullptr, error_log);
+    glDeleteShader(fragment_shader);
+    std::cerr << "Compile error: " << error_log << "\n";
+    delete error_log;
+  }
 
   program_ = glCreateProgram();
   glAttachShader(program_, vertex_shader);
@@ -285,6 +311,18 @@ bool Game::Initialize() {
 
   glDeleteShader(vertex_shader);
   glDeleteShader(fragment_shader);
+
+  GLint program_linked = 0;
+  glGetProgramiv(program_, GL_LINK_STATUS, &program_linked);
+  if (!program_linked) {
+    GLsizei log_length = 0;
+    glGetProgramiv(program_, GL_INFO_LOG_LENGTH, &log_length);
+    GLchar *error_log = new GLchar[log_length];
+    glGetProgramInfoLog(program_, log_length, nullptr, error_log);
+    glDeleteProgram(program_);
+    std::cerr << "Link error: " << error_log << "\n";
+    delete error_log;
+  }
 
   view_projection_location_ = glGetUniformLocation(program_, "uViewProjection");
   model_location_ = glGetUniformLocation(program_, "uModel");
@@ -656,6 +694,9 @@ void Game::DrawBlock(Block *block, float x, float y, float z, float size) {
     glUniform3f(color_location_, r, g, b);
     glUseProgram(0);
 
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture_);
+
     glUseProgram(program_);
     glBindVertexArray(vertex_array_);
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices_.size()),
@@ -697,6 +738,9 @@ void Game::DrawHighlight() {
   glUseProgram(program_);
   glUniform3f(color_location_, 0.07f, 0.07f, 0.07f);  // Dark gray
   glUseProgram(0);
+
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, texture_);
 
   glUseProgram(program_);
   glBindVertexArray(highlight_vertex_array_);

@@ -19,5 +19,5 @@
 #include <ctime>
 
 void SeedRandom() {
-  srand(time(NULL));
+  srand(static_cast<unsigned int>(time(nullptr)));
 }
