@@ -625,10 +625,6 @@ void Game::DrawHighlight() {
   if (!ray_cast_hit_.block) {
     return;
   }
-  std::cout << "x: " << ray_cast_hit_.position.x << ", "
-            << "y: " << ray_cast_hit_.position.y << ", "
-            << "z: " << ray_cast_hit_.position.z << ", "
-            << "\n";
 
   glm::mat4 model_matrix(1.0f);
   float size = kWorldSize
