@@ -638,7 +638,7 @@ void Game::DrawHighlight() {
   glUseProgram(0);
 
   glUseProgram(program_);
-  glUniform3f(color_location_, 1.0f, 1.0f, 1.0f);
+  glUniform3f(color_location_, 0.07f, 0.07f, 0.07f);  // Dark gray
   glUseProgram(0);
 
   glUseProgram(program_);
