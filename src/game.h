@@ -30,7 +30,7 @@
 
 class Game {
  public:
-  struct RaycastHit {
+  struct RayCastHit {
     Block *block;
     Block *previous_block;
     glm::vec3 position;
@@ -67,9 +67,8 @@ class Game {
 
   void PlaceBlock();
   void BreakBlock();
-  RaycastHit RaycastBlock();
-  Block *GetBlockNode(float x, float y, float z, int dimension);
-  int GetBlock(float x, float y, float z);
+  RayCastHit RayCastBlock();
+  Block *GetBlock(float x, float y, float z);
   void SetBlock(float x, float y, float z, int dimension, int value);
 
   void ShrinkSize();
@@ -87,6 +86,7 @@ class Game {
   void Update(float delta_time);
   void Render();
   void DrawBlock(Block *block, float x, float y, float z, float size);
+  void DrawHighlight();
 
   glm::vec3 GetCameraForward() const;
   glm::mat4 GetCameraViewMatrix() const;
@@ -127,6 +127,7 @@ class Game {
   bool placing_;
   bool breaking_;
   double last_block_time_;
+  RayCastHit ray_cast_hit_;
 
   Block *world_;
 
@@ -135,6 +136,12 @@ class Game {
   GLuint vertex_array_;
   GLuint vertex_buffer_;
   GLuint element_buffer_;
+
+  std::vector<Vertex> highlight_vertices_;
+  std::vector<unsigned int> highlight_indices_;
+  GLuint highlight_vertex_array_;
+  GLuint highlight_vertex_buffer_;
+  GLuint highlight_element_buffer_;
 
   GLuint program_;
   GLuint view_projection_location_;

@@ -76,6 +76,7 @@ Game::Game()
       breaking_(false),
       placing_(false),
       last_block_time_(0),
+      ray_cast_hit_(),
       world_() {}
 
 Game::~Game() {
@@ -83,6 +84,11 @@ Game::~Game() {
   glDeleteVertexArrays(1, &vertex_array_);
   glDeleteBuffers(1, &vertex_buffer_);
   glDeleteBuffers(1, &element_buffer_);
+
+  glDeleteVertexArrays(1, &highlight_vertex_array_);
+  glDeleteBuffers(1, &highlight_vertex_buffer_);
+  glDeleteBuffers(1, &highlight_element_buffer_);
+
   glDeleteProgram(program_);
 
   glfwDestroyWindow(window_);
@@ -134,7 +140,7 @@ bool Game::Initialize() {
   glEnable(GL_CULL_FACE);
   glCullFace(GL_BACK);
 
-  // Generate geometry
+  // Generate block geometry
 
   vertices_ = kCubeVertices;
   indices_ = kCubeIndices;
@@ -169,6 +175,45 @@ bool Game::Initialize() {
   glEnableVertexAttribArray(2);
   glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
                         sizeof(vertices_[0]),
+                        reinterpret_cast<void *>(6 * sizeof(float)));
+
+  glBindVertexArray(0);
+
+  // Generate highlight geometry
+
+  highlight_vertices_ = kHighlightVertices;
+  highlight_indices_ = kHighlightIndices;
+
+  glGenVertexArrays(1, &highlight_vertex_array_);
+  glBindVertexArray(highlight_vertex_array_);
+
+  glGenBuffers(1, &highlight_vertex_buffer_);
+  glBindBuffer(GL_ARRAY_BUFFER, highlight_vertex_buffer_);
+  glBufferData(GL_ARRAY_BUFFER, highlight_vertices_.size() * sizeof(highlight_vertices_[0]),
+               &highlight_vertices_[0], GL_STATIC_DRAW);
+
+  glGenBuffers(1, &highlight_element_buffer_);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, highlight_element_buffer_);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, highlight_indices_.size() * sizeof(highlight_indices_[0]), 
+               &highlight_indices_[0], GL_STATIC_DRAW);
+
+  // Vertex attributes
+  // (Note that these can be toggled and replaced e.g. with glVertexAttrib3f)
+
+  // Position
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
+                        sizeof(highlight_vertices_[0]),
+                        reinterpret_cast<void *>(0));
+  // Normal
+  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
+                        sizeof(highlight_vertices_[0]),
+                        reinterpret_cast<void *>(3 * sizeof(float)));
+  // Color
+  glEnableVertexAttribArray(2);
+  glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
+                        sizeof(highlight_vertices_[0]),
                         reinterpret_cast<void *>(6 * sizeof(float)));
 
   glBindVertexArray(0);
@@ -294,6 +339,8 @@ void Game::Update(float delta_time) {
     BreakBlock();
     last_block_time_ = time;
   }
+
+  ray_cast_hit_ = RayCastBlock();
 }
 
 void Game::GenerateWorld() {
@@ -306,7 +353,7 @@ void Game::GenerateWorld() {
 }
 
 void Game::PlaceBlock() {
-  RaycastHit hit = RaycastBlock();
+  RayCastHit hit = RayCastBlock();
   if (hit.block) {
     SetBlock(hit.previous_position.x, hit.previous_position.y,
              hit.previous_position.z, block_dimension_, color_);
@@ -314,14 +361,19 @@ void Game::PlaceBlock() {
 }
 
 void Game::BreakBlock() {
-  RaycastHit hit = RaycastBlock();
+  RayCastHit hit = RayCastBlock();
   if (hit.block) {
-    hit.block->set_value(kNoValue);
+    SetBlock(hit.position.x, hit.position.y, hit.position.z,
+             block_dimension_, kNoValue);
   }
 }
 
-Game::RaycastHit Game::RaycastBlock() {
-  RaycastHit hit;
+double RoundToNearest(float n, float x) {
+  return glm::floor(n / x) * x;
+}
+
+Game::RayCastHit Game::RayCastBlock() {
+  RayCastHit hit;
   hit.block = nullptr;
   hit.previous_block = nullptr;
   hit.position = camera_position_;
@@ -330,10 +382,23 @@ Game::RaycastHit Game::RaycastBlock() {
 
   for (int i = 0; i < 5000; ++i) {
     hit.previous_block = hit.block;
-    hit.block = GetBlockNode(hit.position.x, hit.position.y, hit.position.z,
-                             block_dimension_);
-    if (!hit.block->is_leaf() || hit.block->value() != kNoValue) {
-      break;
+    hit.block = GetBlock(hit.position.x, hit.position.y, hit.position.z);
+    if (hit.block &&
+        (!hit.block->is_leaf() || hit.block->value() != kNoValue)) {
+      hit.position.x = RoundToNearest(
+          hit.position.x, kWorldSize * glm::pow(2.0f, -block_dimension_));
+      hit.position.y = RoundToNearest(
+          hit.position.y, kWorldSize * glm::pow(2.0f, -block_dimension_));
+      hit.position.z = RoundToNearest(
+          hit.position.z, kWorldSize * glm::pow(2.0f, -block_dimension_));
+
+      hit.previous_position.x = RoundToNearest(
+          hit.previous_position.x, kWorldSize * glm::pow(2.0f, -block_dimension_));
+      hit.previous_position.y = RoundToNearest(
+          hit.previous_position.y, kWorldSize * glm::pow(2.0f, -block_dimension_));
+      hit.previous_position.z = RoundToNearest(
+          hit.previous_position.z, kWorldSize * glm::pow(2.0f, -block_dimension_));
+      return hit;
     }
     hit.previous_position = hit.position;
     float step_size = glm::pow(2.0f, static_cast<float>(-block_dimension_));
@@ -343,7 +408,63 @@ Game::RaycastHit Game::RaycastBlock() {
   return hit;
 }
 
-Block *Game::GetBlockNode(float x, float y, float z, int dimension) {
+Block *Game::GetBlock(float x, float y, float z) {
+  Block *block = world_;
+  float size = kWorldSize;
+  float dx = 0.0f;
+  float dy = 0.0f;
+  float dz = 0.0f;
+
+  for (int i = 0; ; ++i) {
+    if (block->is_leaf()) {
+      return block;
+    }
+
+    size /= 2.0f;
+    float center_x = size + dx;
+    float center_y = size + dy;
+    float center_z = size + dz;
+
+    int index = 0;
+    if        (x  < center_x && y >= center_y && z >= center_z) {
+      index = 0;
+      dy += size;
+      dz += size;
+    } else if (x >= center_x && y >= center_y && z >= center_z) {
+      index = 1;
+      dx += size;
+      dy += size;
+      dz += size;
+    } else if (x  < center_x && y >= center_y && z  < center_z) {
+      index = 2;
+      dy += size;
+    } else if (x >= center_x && y >= center_y && z  < center_z) {
+      index = 3;
+      dx += size;
+      dy += size;
+    } else if (x  < center_x && y  < center_y && z >= center_z) {
+      index = 4;
+      dz += size;
+    } else if (x >= center_x && y  < center_y && z >= center_z) {
+      index = 5;
+      dx += size;
+      dz += size;
+    } else if (x  < center_x && y  < center_y && z  < center_z) {
+      index = 6;
+    } else if (x >= center_x && y  < center_y && z  < center_z) {
+      index = 7;
+      dx += size;
+    }
+
+    Block *child = block->child(index);
+    if (!child) {
+      return nullptr;
+    }
+    block = child;
+  }
+}
+
+void Game::SetBlock(float x, float y, float z, int dimension, int value) {
   Block *block = world_;
   float size = kWorldSize;
   float dx = 0.0f;
@@ -395,67 +516,6 @@ Block *Game::GetBlockNode(float x, float y, float z, int dimension) {
     block = child;
   }
 
-  return block;
-}
-
-int Game::GetBlock(float x, float y, float z) {
-  Block *block = world_;
-  float size = kWorldSize;
-  float dx = 0.0f;
-  float dy = 0.0f;
-  float dz = 0.0f;
-
-  for (int i = 0; ; ++i) {
-    if (block->is_leaf()) {
-      return block->value();
-    }
-
-    size /= 2.0f;
-    float center_x = size + dx;
-    float center_y = size + dy;
-    float center_z = size + dz;
-
-    int index = 0;
-    if        (x  < center_x && y >= center_y && z >= center_z) {
-      index = 0;
-      dy += size;
-      dz += size;
-    } else if (x >= center_x && y >= center_y && z >= center_z) {
-      index = 1;
-      dx += size;
-      dy += size;
-      dz += size;
-    } else if (x  < center_x && y >= center_y && z  < center_z) {
-      index = 2;
-      dy += size;
-    } else if (x >= center_x && y >= center_y && z  < center_z) {
-      index = 3;
-      dx += size;
-      dy += size;
-    } else if (x  < center_x && y  < center_y && z >= center_z) {
-      index = 4;
-      dz += size;
-    } else if (x >= center_x && y  < center_y && z >= center_z) {
-      index = 5;
-      dx += size;
-      dz += size;
-    } else if (x  < center_x && y  < center_y && z  < center_z) {
-      index = 6;
-    } else if (x >= center_x && y  < center_y && z  < center_z) {
-      index = 7;
-      dx += size;
-    }
-
-    Block *child = block->child(index);
-    if (!child) {
-      return 0;
-    }
-    block = child;
-  }
-}
-
-void Game::SetBlock(float x, float y, float z, int dimension, int value) {
-  Block *block = GetBlockNode(x, y, z, dimension);
   block->set_value(value);
   world_->Simplify();
 }
@@ -494,7 +554,7 @@ void Game::Render() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   float fov = 90.0f;
-  float near = 0.01f;;
+  float near = 0.01f;
   float far = 500.0f;
   glm::mat4 projection_matrix =
       glm::perspective(glm::radians(fov), aspect, near, far);
@@ -508,7 +568,15 @@ void Game::Render() {
                      static_cast<const GLfloat *>(&view_projection_matrix[0][0]));
   glUseProgram(0);
 
+  if (wireframe_) {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  }
   DrawBlock(world_, 0.0f, 0.0f, 0.0f, kWorldSize);
+  if (wireframe_) {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  }
+
+  DrawHighlight();
 
   glfwSwapBuffers(window_);
 }
@@ -517,6 +585,7 @@ void Game::DrawBlock(Block *block, float x, float y, float z, float size) {
   if (!block) {
     return;
   }
+
   if (block->value() != kNoValue) {
     glm::mat4 model_matrix(1.0f);
     model_matrix = glm::scale(glm::vec3(size)) * model_matrix;
@@ -554,6 +623,40 @@ void Game::DrawBlock(Block *block, float x, float y, float z, float size) {
     DrawBlock(block->child(6), x       , y          , z       , size);
     DrawBlock(block->child(7), x + size, y          , z       , size);
   }
+}
+
+void Game::DrawHighlight() {
+  if (!ray_cast_hit_.block) {
+    return;
+  }
+  std::cout << "x: " << ray_cast_hit_.position.x << ", "
+            << "y: " << ray_cast_hit_.position.y << ", "
+            << "z: " << ray_cast_hit_.position.z << ", "
+            << "\n";
+
+  glm::mat4 model_matrix(1.0f);
+  float size = kWorldSize
+      * glm::pow(2.0f, static_cast<float>(-block_dimension_));
+  model_matrix = glm::scale(glm::vec3(size)) * model_matrix;
+  model_matrix = glm::translate(ray_cast_hit_.position) * model_matrix;
+
+  glUseProgram(program_);
+  glUniformMatrix4fv(model_location_, 1, GL_FALSE,
+                     static_cast<const GLfloat *>(&model_matrix[0][0]));
+  glUseProgram(0);
+
+  glUseProgram(program_);
+  glUniform3f(color_location_, 1.0f, 1.0f, 1.0f);
+  glUseProgram(0);
+
+  glUseProgram(program_);
+  glBindVertexArray(highlight_vertex_array_);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(highlight_indices_.size()),
+                 GL_UNSIGNED_INT, reinterpret_cast<void *>(0));
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  glBindVertexArray(0);
+  glUseProgram(0);
 }
 
 glm::vec3 Game::GetCameraForward() const {
@@ -640,11 +743,6 @@ void Game::KeyDown(int key) {
 
   if (key == GLFW_KEY_G) {
     wireframe_ = !wireframe_;
-    if (wireframe_) {
-      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    } else {
-      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    }
   }
   if (key == GLFW_KEY_ESCAPE) {
     UnfocusWindow();
