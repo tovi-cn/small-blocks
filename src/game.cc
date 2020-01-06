@@ -368,6 +368,13 @@ void Game::BreakBlock() {
   }
 }
 
+void Game::CopyBlock() {
+  RayCastHit hit = RayCastBlock();
+  if (hit.block) {
+    color_ = hit.block->value();
+  }
+}
+
 Game::RayCastHit Game::RayCastBlock() {
   RayCastHit hit;
   hit.block = nullptr;
@@ -683,6 +690,9 @@ void Game::MouseDown(int button) {
     placing_ = true;
     breaking_ = false;
     last_block_time_ = glfwGetTime();
+  }
+  if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
+    CopyBlock();
   }
 }
 

@@ -67,6 +67,7 @@ class Game {
 
   void PlaceBlock();
   void BreakBlock();
+  void CopyBlock();
   RayCastHit RayCastBlock();
   Block *GetBlock(float x, float y, float z);
   void SetBlock(float x, float y, float z, int dimension, int value);
