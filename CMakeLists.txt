@@ -19,10 +19,13 @@ add_subdirectory(dependencies/glfw)
 set(GLM_TEST_ENABLE OFF CACHE BOOL "")
 add_subdirectory(dependencies/glm)
 
+add_subdirectory(dependencies/stb)
+
 include_directories(dependencies)
 include_directories(dependencies/glm)
 include_directories(dependencies/glad/include)
 include_directories(dependencies/glfw/include)
+include_directories(dependencies/stb)
 
 set(CMAKE_CXX_STANDARD 11)
 if (MSVC)
@@ -43,4 +46,5 @@ target_link_libraries(small-blocks
   glad
   glfw
   ${GLFW_LIBRARIES}
+  stb_image
   )
