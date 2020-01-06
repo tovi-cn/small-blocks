@@ -346,10 +346,10 @@ void Game::Update(float delta_time) {
 void Game::GenerateWorld() {
   delete world_;
   world_ = new Block();
-  world_->set_child(4, new Block(kColor2));
-  world_->set_child(5, new Block(kColor1));
-  world_->set_child(6, new Block(kColor3));
-  world_->set_child(7, new Block(kColor4));
+  world_->set_child(4, new Block(kColor3));
+  world_->set_child(5, new Block(kColor2));
+  world_->set_child(6, new Block(kColor4));
+  world_->set_child(7, new Block(kColor5));
 }
 
 void Game::PlaceBlock() {
