@@ -41,6 +41,7 @@ static const char *kVertexShaderText =
 "out vec2 texCoord;\n"
 "void main() {\n"
 "  gl_Position = uViewProjection * uModel * vec4(vPos, 1.0);\n"
+"  color = uColor;\n"
 "  if (vNormal.x == 1 || vNormal.x == -1) {\n"
 "    color *= .65;\n"
 "  }\n"
@@ -53,7 +54,6 @@ static const char *kVertexShaderText =
 "  if (vNormal.z == 1 || vNormal.z == -1) {\n"
 "    color *= .5;\n"
 "  }\n"
-"  color = uColor;\n"
 "  // TODO: color = vCol;\n"
 "  texCoord = vTexCoord;\n"
 "}\n";
@@ -249,17 +249,12 @@ bool Game::Initialize() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glGenerateMipmap(GL_TEXTURE_2D);
 
-  // Black/white checkerboard
-  float pixels[] = {
-    0.0f, 0.0f, 0.0f,  1.0f, 1.0f, 1.0f,
-    1.0f, 1.0f, 1.0f,  0.0f, 0.0f, 0.0f,
-  };
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, GL_FLOAT, pixels);
-
   int image_width;
   int image_height;
+  stbi_set_flip_vertically_on_load(true);
   unsigned char *image_data =
-      stbi_load("assets/dirt.jpg", &image_width, &image_height, nullptr, 3);
+      stbi_load("assets/block.png", &image_width, &image_height, nullptr, 3);
+  stbi_set_flip_vertically_on_load(false);
   if (image_data) {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image_width, image_height, 0,
                  GL_RGB, GL_UNSIGNED_BYTE, image_data);
@@ -327,6 +322,7 @@ bool Game::Initialize() {
   view_projection_location_ = glGetUniformLocation(program_, "uViewProjection");
   model_location_ = glGetUniformLocation(program_, "uModel");
   color_location_ = glGetUniformLocation(program_, "uColor");
+  texture_location_ = glGetUniformLocation(program_, "uTexture");
 
   // Create world
 
@@ -741,6 +737,9 @@ void Game::DrawHighlight() {
 
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, texture_);
+  glUseProgram(program_);
+  glUniform1i(texture_location_, 0);
+  glUseProgram(0);
 
   glUseProgram(program_);
   glBindVertexArray(highlight_vertex_array_);

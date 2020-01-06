@@ -151,6 +151,7 @@ class Game {
   GLuint view_projection_location_;
   GLuint model_location_;
   GLuint color_location_;
+  GLuint texture_location_;
 };
 
 #endif  // GAME_H_
