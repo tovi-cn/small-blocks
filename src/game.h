@@ -17,6 +17,7 @@
 #define GAME_H_
 
 #include <bitset>
+#include <string>
 #include <vector>
 
 #include "glad/glad.h"
@@ -32,7 +33,7 @@ class Game {
  public:
   struct RayCastHit {
     Block *block;
-    Block *previous_block;
+    int dimension;
     glm::vec3 position;
     glm::vec3 previous_position;
   };
@@ -69,7 +70,7 @@ class Game {
   void BreakBlock();
   void CopyBlock();
   RayCastHit RayCastBlock();
-  Block *GetBlock(float x, float y, float z);
+  Block *GetBlock(float x, float y, float z, int *dimension);
   void SetBlock(float x, float y, float z, int dimension, int value);
 
   void ShrinkSize();
@@ -80,14 +81,20 @@ class Game {
 
   void MouseDown(int button);
   void MouseUp(int button);
+  void Scroll(float offset);
   void KeyDown(int key);
   void KeyUp(int key);
 
  private:
+  GLuint CreateShader(const char *text, GLenum type);
+  GLuint CreateShaderProgram(const char *vertex_shader_text,
+                             const char *fragment_shader_text);
+
   void Update(float delta_time);
   void Render();
   void DrawBlock(Block *block, float x, float y, float z, float size);
   void DrawHighlight();
+  void DrawCrosshair();
 
   glm::vec3 GetCameraForward() const;
   glm::mat4 GetCameraViewMatrix() const;
@@ -97,6 +104,8 @@ class Game {
 
   static void OnMouseButtonEvent(GLFWwindow *window, int button,
                                  int action, int mods);
+  static void OnScrollEvent(GLFWwindow *window, double x_offset,
+                            double y_offset);
   static void OnKeyEvent(GLFWwindow *window, int key, int scancode,
                          int action, int mods);
   static void OnGlfwError(int error, const char *description);
@@ -145,13 +154,18 @@ class Game {
   GLuint highlight_vertex_buffer_;
   GLuint highlight_element_buffer_;
 
-  GLuint texture_;
+  std::vector<CrosshairVertex> crosshair_vertices_;
+  std::vector<unsigned int> crosshair_indices_;
+  GLuint crosshair_vertex_array_;
+  GLuint crosshair_vertex_buffer_;
+  GLuint crosshair_element_buffer_;
 
-  GLuint program_;
-  GLuint view_projection_location_;
-  GLuint model_location_;
-  GLuint color_location_;
-  GLuint texture_location_;
+  GLuint texture_;
+  GLuint highlight_texture_;
+  GLuint crosshair_texture_;
+
+  GLuint shader_program_;
+  GLuint crosshair_shader_program_;
 };
 
 #endif  // GAME_H_

@@ -39,8 +39,29 @@ struct Vertex {
   float v;
 };
 
+struct CrosshairVertex {
+  float x;
+  float y;
+
+  float u;
+  float v;
+};
+
+// TODO: Use non-interleaved buffers for increased readability.
+
 extern const std::vector<Vertex> kCubeVertices;
 extern const std::vector<unsigned int> kCubeIndices;
+
+static const std::vector<CrosshairVertex> kCrosshairVertices = {
+  {0, 1,  0, 1},
+  {1, 1,  1, 1},
+  {0, 0,  0, 0},
+  {1, 0,  1, 0},
+};
+
+static const std::vector<unsigned int> kCrosshairIndices = {
+  2, 1, 0, 2, 3, 1,
+};
 
 static const std::vector<Vertex> kHighlightVertices = {
   // Front
