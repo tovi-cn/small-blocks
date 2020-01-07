@@ -1,5 +1,3 @@
-Highlight where the block will be placed.
-
 Cuboid collision with the player and the world.
 Store the world and load from disk.
 Jetpack flying.
