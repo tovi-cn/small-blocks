@@ -984,7 +984,9 @@ void Game::Scroll(float offset) {
 }
 
 void Game::KeyDown(int key) {
-  pressed_keys_.set(key);
+  if (key >= 0) {
+    pressed_keys_.set(key);
+  }
 
   if (key == GLFW_KEY_Q) {
     ShrinkSize();
@@ -1028,7 +1030,9 @@ void Game::KeyDown(int key) {
 }
 
 void Game::KeyUp(int key) {
-  pressed_keys_.reset(key);
+  if (key >= 0) {
+    pressed_keys_.reset(key);
+  }
 }
 
 void Game::FocusWindow() {
