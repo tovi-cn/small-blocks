@@ -9,7 +9,7 @@ Window::~Window() {
   glfwTerminate();
 }
 
-bool Window::Initialize(std::string title) {
+bool Window::Initialize(const std::string &title) {
   glfwSetErrorCallback(OnGlfwError);
   if (!glfwInit()) {
     std::cerr << "glfwInit() failed\n";

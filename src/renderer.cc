@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-Renderer::Renderer(Window &window) : window_(window) {}
+Renderer::Renderer(Window *window) : window_(window) {}
 
 Renderer::~Renderer() {}
 
@@ -26,7 +26,7 @@ bool Renderer::Initialize() {
 }
 
 void Renderer::SwapBuffers() {
-  glfwSwapBuffers(window_.window_glfw());
+  glfwSwapBuffers(window_->window_glfw());
 }
 
 void GLAPIENTRY Renderer::OnGlError(

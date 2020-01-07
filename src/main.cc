@@ -26,15 +26,15 @@ int main() {
     return 1;
   }
 
-  Renderer renderer(window);
+  Renderer renderer(&window);
   if (!renderer.Initialize()) {
     return 1;
   }
 
-  InputSystem input(window);
+  InputSystem input(&window);
   input.Initialize();
 
-  Game game(window, renderer, input);
+  Game game(&window, &renderer, &input);
   if (!game.Initialize()) {
     return 1;
   }

@@ -9,7 +9,7 @@
 
 class Renderer {
  public:
-  Renderer(Window &window);
+  Renderer(Window *window);
   ~Renderer();
 
   bool Initialize();
@@ -20,7 +20,7 @@ class Renderer {
       GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
       const GLchar *message, const void *user_param);
 
-  Window &window_;
+  Window *window_;
 };
 
 #endif  // RENDERER_H_

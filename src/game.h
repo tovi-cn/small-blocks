@@ -60,7 +60,7 @@ class Game : public InputListener {
 
   static constexpr double kBlockInterval = 0.25;
 
-  Game(Window &window, Renderer &renderer, InputSystem &input);
+  Game(Window *window, Renderer *renderer, InputSystem *input);
   ~Game();
 
   bool Initialize();
@@ -104,9 +104,9 @@ class Game : public InputListener {
   glm::vec3 GetCameraForward() const;
   glm::mat4 GetCameraViewMatrix() const;
 
-  Window &window_;
-  Renderer &renderer_;
-  InputSystem &input_;
+  Window *window_;
+  Renderer *renderer_;
+  InputSystem *input_;
 
   bool window_focused_;
   double mouse_last_x_;

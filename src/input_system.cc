@@ -2,13 +2,13 @@
 
 #include <algorithm>
 
-InputSystem::InputSystem(Window &window)
+InputSystem::InputSystem(Window *window)
   : window_(window),
     pressed_mouse_buttons_(), pressed_keys_(),
     listeners_() {}
 
 InputSystem::~InputSystem() {
-  GLFWwindow *window_glfw = window_.window_glfw();
+  GLFWwindow *window_glfw = window_->window_glfw();
 
   glfwSetWindowUserPointer(window_glfw, nullptr);
 
@@ -18,7 +18,7 @@ InputSystem::~InputSystem() {
 }
 
 void InputSystem::Initialize() {
-  GLFWwindow *window_glfw = window_.window_glfw();
+  GLFWwindow *window_glfw = window_->window_glfw();
 
   glfwSetWindowUserPointer(window_glfw, this);
 

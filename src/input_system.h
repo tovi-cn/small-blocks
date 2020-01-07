@@ -20,7 +20,7 @@ class InputListener {
 
 class InputSystem {
  public:
-  InputSystem(Window &window);
+  InputSystem(Window *window);
   ~InputSystem();
 
   void Initialize();
@@ -48,7 +48,7 @@ class InputSystem {
   static void OnKeyEvent(GLFWwindow *window, int key, int scancode,
                          int action, int mods);
 
-  Window &window_;
+  Window *window_;
   std::bitset<32> pressed_mouse_buttons_;
   std::bitset<1024> pressed_keys_;
   std::vector<InputListener *> listeners_;

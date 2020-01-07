@@ -88,7 +88,7 @@ static const char *kCrosshairFragmentShaderText =
 "  FragColor = texture(uTexture, texCoord);\n"
 "}\n";
 
-Game::Game(Window &window, Renderer &renderer, InputSystem &input)
+Game::Game(Window *window, Renderer *renderer, InputSystem *input)
     : window_(window), renderer_(renderer), input_(input),
       window_focused_(false),
       mouse_last_x_(0.0), mouse_last_y_(0.0),
@@ -132,9 +132,9 @@ Game::~Game() {
 bool Game::Initialize() {
   SeedRandom();
 
-  input_.AddListener(this);
+  input_->AddListener(this);
 
-  window_.Maximize();
+  window_->Maximize();
   FocusWindow();
 
   // Generate block geometry
@@ -406,10 +406,10 @@ GLuint Game::CreateShaderProgram(const char *vertex_shader_text,
 }
 
 void Game::Run() {
-  glfwGetCursorPos(window_.window_glfw(), &mouse_last_x_, &mouse_last_y_);
+  glfwGetCursorPos(window_->window_glfw(), &mouse_last_x_, &mouse_last_y_);
   double last_time = glfwGetTime();
 
-  while (!glfwWindowShouldClose(window_.window_glfw())) {
+  while (!glfwWindowShouldClose(window_->window_glfw())) {
     double current_time = glfwGetTime();
     float delta_time = static_cast<float>(current_time - last_time);
     last_time = current_time;
@@ -424,7 +424,7 @@ void Game::Run() {
 void Game::Update(float delta_time) {
   double mouse_x;
   double mouse_y;
-  glfwGetCursorPos(window_.window_glfw(), &mouse_x, &mouse_y);
+  glfwGetCursorPos(window_->window_glfw(), &mouse_x, &mouse_y);
   float mouse_delta_x = static_cast<float>(mouse_x - mouse_last_x_);
   float mouse_delta_y = static_cast<float>(mouse_y - mouse_last_y_);
   mouse_last_x_ = mouse_x;
@@ -446,26 +446,26 @@ void Game::Update(float delta_time) {
     glm::vec3 right = glm::normalize(glm::cross(forward, up));
 
     glm::vec3 direction(0.0f);
-    if (input_.key_is_pressed(GLFW_KEY_W)) {
+    if (input_->key_is_pressed(GLFW_KEY_W)) {
       direction += forward;
     }
-    if (input_.key_is_pressed(GLFW_KEY_S)) {
+    if (input_->key_is_pressed(GLFW_KEY_S)) {
       direction -= forward;
     }
-    if (input_.key_is_pressed(GLFW_KEY_A)) {
+    if (input_->key_is_pressed(GLFW_KEY_A)) {
       direction -= right;
     }
-    if (input_.key_is_pressed(GLFW_KEY_D)) {
+    if (input_->key_is_pressed(GLFW_KEY_D)) {
       direction += right;
     }
     if (direction != glm::vec3(0.0f)) {
       player_position_ += glm::normalize(direction) * speed_ * delta_time;
     }
 
-    if (input_.key_is_pressed(GLFW_KEY_SPACE)) {
+    if (input_->key_is_pressed(GLFW_KEY_SPACE)) {
       player_position_ += up * speed_ * delta_time;
     }
-    if (input_.key_is_pressed(GLFW_KEY_LEFT_SHIFT)) {
+    if (input_->key_is_pressed(GLFW_KEY_LEFT_SHIFT)) {
       player_position_ -= up * speed_ * delta_time;
     }
   }
@@ -720,16 +720,16 @@ void Game::SetColor(int color) {
 
 void Game::FocusWindow() {
   window_focused_ = true;
-  window_.SetCursorEnabled(false);
+  window_->SetCursorEnabled(false);
 }
 
 void Game::UnfocusWindow() {
   window_focused_ = false;
-  window_.SetCursorEnabled(true);
+  window_->SetCursorEnabled(true);
 }
 
 void Game::Render() {
-  glm::ivec2 window_size = window_.size();
+  glm::ivec2 window_size = window_->size();
   glViewport(0, 0, window_size.x, window_size.y);
 
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -762,7 +762,7 @@ void Game::Render() {
 
   DrawCrosshair();
 
-  renderer_.SwapBuffers();
+  renderer_->SwapBuffers();
 }
 
 void Game::DrawBlock(Block *block, float x, float y, float z, float size) {
@@ -855,7 +855,7 @@ void Game::DrawHighlight() {
 }
 
 void Game::DrawCrosshair() {
-  glm::ivec2 window_size = window_.size();
+  glm::ivec2 window_size = window_->size();
 
   glm::mat4 model_matrix(1.0f);
 

@@ -12,7 +12,7 @@ class Window {
   Window();
   ~Window();
 
-  bool Initialize(std::string title);
+  bool Initialize(const std::string &title);
 
   glm::ivec2 size() const {
     int width;
@@ -22,7 +22,6 @@ class Window {
   }
 
   void Maximize();
-  void HideCursor();
   void SetCursorEnabled(bool enabled);
 
   GLFWwindow *window_glfw() const { return window_; }
