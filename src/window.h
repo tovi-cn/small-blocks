@@ -12,7 +12,7 @@ class Window {
   Window();
   ~Window();
 
-  bool Initialize(const std::string &title);
+  bool Initialize(const std::string &title, glm::ivec2 size);
 
   glm::ivec2 size() const {
     int width;

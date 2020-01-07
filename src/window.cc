@@ -9,7 +9,7 @@ Window::~Window() {
   glfwTerminate();
 }
 
-bool Window::Initialize(const std::string &title) {
+bool Window::Initialize(const std::string &title, glm::ivec2 size) {
   glfwSetErrorCallback(OnGlfwError);
   if (!glfwInit()) {
     std::cerr << "glfwInit() failed\n";
@@ -18,7 +18,7 @@ bool Window::Initialize(const std::string &title) {
 
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-  window_ = glfwCreateWindow(800, 600,
+  window_ = glfwCreateWindow(size.x, size.y,
                              title.c_str(),
                              nullptr, nullptr);
   if (!window_) {
@@ -50,4 +50,3 @@ void Window::OnGlfwError(int error, const char *description) {
   (void)error;
   std::cerr << "Error: " << description << "\n";
 }
-

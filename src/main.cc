@@ -15,6 +15,8 @@
 
 #include <iostream>
 
+#include "glm/vec2.hpp"
+
 #include "game.h"
 #include "input_system.h"
 #include "renderer.h"
@@ -22,7 +24,7 @@
 
 int main() {
   Window window;
-  if (!window.Initialize("Small Blocks")) {
+  if (!window.Initialize("Small Blocks", glm::ivec2(800, 600))) {
     return 1;
   }
 

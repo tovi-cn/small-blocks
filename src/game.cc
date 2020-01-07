@@ -28,6 +28,26 @@
 #include "fractals.h"
 #include "utilities.h"
 
+static constexpr float kWorldSize = 10;
+
+static constexpr int kMaxSizeDimension = -1;
+static constexpr int kMinSizeDimension = 8;
+static constexpr int kDefaultSizeDimension = 0;
+
+static constexpr int kMaxBlockDimension = 1;
+static constexpr int kMinBlockDimension = 16;
+static constexpr int kDefaultBlockDimension = 4;
+
+static constexpr int kNoValue = 0x000000;  // Should always equal to 0.
+static constexpr int kColor1 = 0xeeeeee;   // White
+static constexpr int kColor2 = 0xea4611;   // Red
+static constexpr int kColor3 = 0x25e10e;   // Green
+static constexpr int kColor4 = 0x296fff;   // Blue
+static constexpr int kColor5 = 0xf9dd07;   // Yellow
+static constexpr int kDefaultColor = kColor1;
+
+static constexpr double kBlockInterval = 0.25;
+
 static const char *kVertexShaderText =
 "#version 330 core\n"
 "uniform mat4 uViewProjection;\n"
