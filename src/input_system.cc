@@ -27,6 +27,10 @@ void InputSystem::Initialize() {
   glfwSetKeyCallback(window_glfw, OnKeyEvent);
 }
 
+void InputSystem::PollEvents() {
+  glfwPollEvents();
+}
+
 void InputSystem::AddListener(InputListener *listener) {
   listeners_.push_back(listener);
 }
@@ -36,6 +40,10 @@ void InputSystem::RemoveListener(InputListener *listener) {
   if (position != listeners_.end()) {
     listeners_.erase(position);
   }
+}
+
+double InputSystem::GetTime() const {
+  return glfwGetTime();
 }
 
 void InputSystem::MouseDown(int button) {

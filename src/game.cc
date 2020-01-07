@@ -110,8 +110,9 @@ static const char *kCrosshairFragmentShaderText =
 
 Game::Game(Window *window, Renderer *renderer, InputSystem *input)
     : window_(window), renderer_(renderer), input_(input),
+      exit_requested_(false),
       window_focused_(false),
-      mouse_last_x_(0.0), mouse_last_y_(0.0),
+      mouse_last_position_(0.0),
       wireframe_(false),
       camera_position_(0.0f), camera_rotation_(0.0f),
       player_position_(0.0f), player_rotation_(0.0f),
@@ -279,6 +280,19 @@ bool Game::Initialize() {
 
   glBindVertexArray(0);
 
+  // Create world
+
+  GenerateWorld();
+
+  // Player
+
+  player_position_ =
+      glm::vec3(kWorldSize / 2.0f, kWorldSize / 2.0f, kWorldSize / 2.0f);
+
+  return true;
+}
+
+void Game::LoadAssets() {
   // Load block texture
 
   glGenTextures(1, &texture_);
@@ -360,17 +374,6 @@ bool Game::Initialize() {
 
   shader_program_ = CreateShaderProgram(kVertexShaderText, kFragmentShaderText);
   crosshair_shader_program_ = CreateShaderProgram(kCrosshairVertexShaderText, kCrosshairFragmentShaderText);
-
-  // Create world
-
-  GenerateWorld();
-
-  // Player
-
-  player_position_ =
-      glm::vec3(kWorldSize / 2.0f, kWorldSize / 2.0f, kWorldSize / 2.0f);
-
-  return true;
 }
 
 GLuint Game::CreateShader(const char *text, GLenum type) {
@@ -426,36 +429,39 @@ GLuint Game::CreateShaderProgram(const char *vertex_shader_text,
 }
 
 void Game::Run() {
-  glfwGetCursorPos(window_->window_glfw(), &mouse_last_x_, &mouse_last_y_);
-  double last_time = glfwGetTime();
+  mouse_last_position_ = input_->mouse_position();
+  double last_time = input_->GetTime();
 
-  while (!glfwWindowShouldClose(window_->window_glfw())) {
-    double current_time = glfwGetTime();
+  while (!exit_requested_) {
+    double current_time = input_->GetTime();
     float delta_time = static_cast<float>(current_time - last_time);
     last_time = current_time;
 
+    input_->PollEvents();
+
     Update(delta_time);
     Render();
-
-    glfwPollEvents();
   }
 }
 
 void Game::Update(float delta_time) {
+  if (input_->is_exit_requested()) {
+    exit_requested_ = true;
+    return;
+  }
+
   double mouse_x;
   double mouse_y;
-  glfwGetCursorPos(window_->window_glfw(), &mouse_x, &mouse_y);
-  float mouse_delta_x = static_cast<float>(mouse_x - mouse_last_x_);
-  float mouse_delta_y = static_cast<float>(mouse_y - mouse_last_y_);
-  mouse_last_x_ = mouse_x;
-  mouse_last_y_ = mouse_y;
+  glm::vec2 mouse_position = input_->mouse_position();
+  glm::vec2 mouse_delta = mouse_position - mouse_last_position_;
+  mouse_last_position_ = mouse_position;
 
   speed_ = glm::pow(2.0f, -size_dimension_);
 
   if (window_focused_) {
     float mouse_sensitivity = 0.005f;
-    player_rotation_.x += -mouse_delta_y * mouse_sensitivity;
-    player_rotation_.y += -mouse_delta_x * mouse_sensitivity;
+    player_rotation_.x += -mouse_delta.y * mouse_sensitivity;
+    player_rotation_.y += -mouse_delta.x * mouse_sensitivity;
     player_rotation_.x = glm::clamp(player_rotation_.x, glm::radians(-89.99f),
                                     glm::radians(89.99f));
 
@@ -466,26 +472,26 @@ void Game::Update(float delta_time) {
     glm::vec3 right = glm::normalize(glm::cross(forward, up));
 
     glm::vec3 direction(0.0f);
-    if (input_->key_is_pressed(GLFW_KEY_W)) {
+    if (input_->is_key_pressed(KEY_W)) {
       direction += forward;
     }
-    if (input_->key_is_pressed(GLFW_KEY_S)) {
+    if (input_->is_key_pressed(KEY_S)) {
       direction -= forward;
     }
-    if (input_->key_is_pressed(GLFW_KEY_A)) {
+    if (input_->is_key_pressed(KEY_A)) {
       direction -= right;
     }
-    if (input_->key_is_pressed(GLFW_KEY_D)) {
+    if (input_->is_key_pressed(KEY_D)) {
       direction += right;
     }
     if (direction != glm::vec3(0.0f)) {
       player_position_ += glm::normalize(direction) * speed_ * delta_time;
     }
 
-    if (input_->key_is_pressed(GLFW_KEY_SPACE)) {
+    if (input_->is_key_pressed(KEY_SPACE)) {
       player_position_ += up * speed_ * delta_time;
     }
-    if (input_->key_is_pressed(GLFW_KEY_LEFT_SHIFT)) {
+    if (input_->is_key_pressed(KEY_LEFT_SHIFT)) {
       player_position_ -= up * speed_ * delta_time;
     }
   }
@@ -503,7 +509,7 @@ void Game::Update(float delta_time) {
   camera_position_.y += player_height;
   camera_rotation_ = player_rotation_;
 
-  double time = glfwGetTime();
+  double time = input_->GetTime();
   if (placing_ && time - last_block_time_ >= block_interval_) {
     PlaceBlock();
     last_block_time_ = time;
@@ -930,28 +936,28 @@ glm::mat4 Game::GetCameraViewMatrix() const {
 void Game::MouseDown(int button) {
   FocusWindow();
 
-  if (button == GLFW_MOUSE_BUTTON_LEFT) {
+  if (button == MOUSE_BUTTON_LEFT) {
     BreakBlock();
     breaking_ = true;
     placing_ = false;
-    last_block_time_ = glfwGetTime();
+    last_block_time_ = input_->GetTime();
   }
-  if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+  if (button == MOUSE_BUTTON_RIGHT) {
     PlaceBlock();
     placing_ = true;
     breaking_ = false;
-    last_block_time_ = glfwGetTime();
+    last_block_time_ = input_->GetTime();
   }
-  if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
+  if (button == MOUSE_BUTTON_MIDDLE) {
     CopyBlock();
   }
 }
 
 void Game::MouseUp(int button) {
-  if (button == GLFW_MOUSE_BUTTON_LEFT) {
+  if (button == MOUSE_BUTTON_LEFT) {
     breaking_ = false;
   }
-  if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+  if (button == MOUSE_BUTTON_RIGHT) {
     placing_ = false;
   }
 }
@@ -965,43 +971,43 @@ void Game::Scroll(float offset) {
 }
 
 void Game::KeyDown(int key) {
-  if (key == GLFW_KEY_Q) {
+  if (key == KEY_Q) {
     ShrinkSize();
   }
-  if (key == GLFW_KEY_E) {
+  if (key == KEY_E) {
     GrowSize();
   }
-  if (key == GLFW_KEY_Z) {
+  if (key == KEY_Z) {
     ShrinkBlock();
   }
-  if (key == GLFW_KEY_C) {
+  if (key == KEY_C) {
     GrowBlock();
   }
 
-  if (key == GLFW_KEY_1) {
+  if (key == KEY_1) {
     SetColor(kColor1);
   }
-  if (key == GLFW_KEY_2) {
+  if (key == KEY_2) {
     SetColor(kColor2);
   }
-  if (key == GLFW_KEY_3) {
+  if (key == KEY_3) {
     SetColor(kColor3);
   }
-  if (key == GLFW_KEY_4) {
+  if (key == KEY_4) {
     SetColor(kColor4);
   }
-  if (key == GLFW_KEY_5) {
+  if (key == KEY_5) {
     SetColor(kColor5);
   }
 
-  if (key == GLFW_KEY_R) {
+  if (key == KEY_R) {
     GenerateWorld();
   }
 
-  if (key == GLFW_KEY_G) {
+  if (key == KEY_G) {
     wireframe_ = !wireframe_;
   }
-  if (key == GLFW_KEY_ESCAPE) {
+  if (key == KEY_ESCAPE) {
     UnfocusWindow();
   }
 }

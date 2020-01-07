@@ -7,6 +7,7 @@
 #define GLFW_INCLUDE_NONE
 #include "GLFW/glfw3.h"
 
+#include "key_code.h"
 #include "window.h"
 
 class InputListener {
@@ -24,15 +25,29 @@ class InputSystem {
   ~InputSystem();
 
   void Initialize();
+  void PollEvents();
   void AddListener(InputListener *listener);
   void RemoveListener(InputListener *listener);
 
-  bool mouse_button_is_pressed(int button) {
+  glm::vec2 mouse_position() const {
+    double x;
+    double y;
+    glfwGetCursorPos(window_->window_glfw(), &x, &y);
+    return glm::vec2(x, y);
+  }
+
+  bool is_mouse_button_pressed(int button) const {
     return pressed_mouse_buttons_.test(button);
   }
-  bool key_is_pressed(int key) {
+  bool is_key_pressed(int key) const {
     return pressed_keys_.test(key);
   }
+
+  bool is_exit_requested() const {
+    return glfwWindowShouldClose(window_->window_glfw());
+  }
+
+  double GetTime() const;
 
   void MouseDown(int button);
   void MouseUp(int button);
@@ -49,8 +64,8 @@ class InputSystem {
                          int action, int mods);
 
   Window *window_;
-  std::bitset<32> pressed_mouse_buttons_;
-  std::bitset<1024> pressed_keys_;
+  std::bitset<NUM_MOUSE_BUTTONS> pressed_mouse_buttons_;
+  std::bitset<NUM_KEYS> pressed_keys_;
   std::vector<InputListener *> listeners_;
 };
 

@@ -71,6 +71,8 @@ class Game : public InputListener {
   virtual void KeyUp(int key);
 
  private:
+  void LoadAssets();
+
   GLuint CreateShader(const char *text, GLenum type);
   GLuint CreateShaderProgram(const char *vertex_shader_text,
                              const char *fragment_shader_text);
@@ -88,9 +90,9 @@ class Game : public InputListener {
   Renderer *renderer_;
   InputSystem *input_;
 
+  bool exit_requested_;
   bool window_focused_;
-  double mouse_last_x_;
-  double mouse_last_y_;
+  glm::vec2 mouse_last_position_;
 
   float wireframe_;
   glm::vec3 camera_position_;
