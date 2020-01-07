@@ -20,9 +20,12 @@
 #include "game.h"
 #include "input_system.h"
 #include "renderer.h"
+#include "utilities.h"
 #include "window.h"
 
 int main() {
+  SeedRandom();
+
   Window window;
   if (!window.Initialize("Small Blocks", glm::ivec2(800, 600))) {
     return 1;
@@ -42,5 +45,6 @@ int main() {
   }
 
   game.Run();
+
   return 0;
 }

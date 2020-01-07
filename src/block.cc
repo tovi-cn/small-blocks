@@ -19,23 +19,27 @@ void Block::Simplify() {
   if (is_leaf()) {
     return;
   }
-  for (int i = 0; i < 8; ++i) {
+
+  for (int i = 0; i < kNumChildren; ++i) {
     if (children_[i]) {
       children_[i]->Simplify();
     }
   }
-  for (int i = 0; i < 8; ++i) {
+
+  // Check whether the children can be merged into a single block.
+  for (int i = 0; i < kNumChildren; ++i) {
     if (!children_[i] || !children_[i]->is_leaf()) {
       return;
     }
   }
-  for (int i = 0; i < 8; ++i) {
+  for (int i = 0; i < kNumChildren; ++i) {
     if (children_[i]->value_ != children_[0]->value_) {
       return;
     }
   }
+
   value_ = children_[0]->value_;
-  for (int i = 0; i < 8; ++i) {
+  for (int i = 0; i < kNumChildren; ++i) {
     delete children_[i];
     children_[i] = nullptr;
   }
@@ -43,7 +47,7 @@ void Block::Simplify() {
 
 void Block::Subdivide() {
   assert(is_leaf());
-  for (int i = 0; i < 8; ++i) {
+  for (int i = 0; i < kNumChildren; ++i) {
     children_[i] = new Block(value_);
   }
   value_ = 0;

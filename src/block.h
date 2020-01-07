@@ -20,30 +20,32 @@
 
 // An octree block, consisting of eight child blocks
 //
-//   .-------.
-//   | 0 | 1 | \      Top (seen from above)
-//   |---+---|  \
-//   | 2 | 3 |   \
-//   '-------'    \
-//    \    .-------.
-//     \   | 4 | 5 |  Bottom (seen from above)
-//      \  |---+---|
-//       \ | 6 | 7 |
-//         '-------'
+//  .-------.
+//  | 0 | 1 | \  Top (as seen from above)
+//  |---+---|  \
+//  | 2 | 3 |   \
+//  '-------'    \
+//   \    .-------.
+//    \   | 4 | 5 |  Bottom (as seen from above)
+//     \  |---+---|
+//      \ | 6 | 7 |
+//        '-------'
 //
 class Block {
  public:
+  static const int kNumChildren = 8;
+
   Block(int value = 0)
       : value_(value), children_() {}
 
   ~Block() {
-    for (int i = 0; i < 8; ++i) {
+    for (int i = 0; i < kNumChildren; ++i) {
       delete children_[i];
     }
   }
 
   void set_child(int index, Block *child) {
-    assert(index >= 0 && index < 8);
+    assert(index >= 0 && index < kNumChildren);
     if (value_) {
       Subdivide();
     }
@@ -57,7 +59,7 @@ class Block {
   }
 
   bool is_leaf() const {
-    for (int i = 0; i < 8; ++i) {
+    for (int i = 0; i < kNumChildren; ++i) {
       if (children_[i]) {
         return false;
       }
@@ -70,7 +72,7 @@ class Block {
   }
   void set_value(int value) {
     value_ = value;
-    for (int i = 0; i < 8; ++i) {
+    for (int i = 0; i < kNumChildren; ++i) {
       delete children_[i];
       children_[i] = nullptr;
     }
@@ -81,7 +83,7 @@ class Block {
 
  private:
   int value_;
-  Block *children_[8];
+  Block *children_[kNumChildren];
 };
 
 #endif  // BLOCK_H_
