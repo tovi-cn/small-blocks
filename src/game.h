@@ -73,10 +73,6 @@ class Game : public InputListener {
  private:
   void LoadAssets();
 
-  GLuint CreateShader(const char *text, GLenum type);
-  GLuint CreateShaderProgram(const char *vertex_shader_text,
-                             const char *fragment_shader_text);
-
   void Update(float delta_time);
   void Render();
   void DrawBlock(Block *block, float x, float y, float z, float size);

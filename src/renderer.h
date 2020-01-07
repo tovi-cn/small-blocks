@@ -13,6 +13,11 @@ class Renderer {
   ~Renderer();
 
   bool Initialize();
+
+  GLuint CreateShaderProgram(const std::string &vertex_shader_text,
+                             const std::string &fragment_shader_text);
+  GLuint CreateShader(const std::string &text, GLenum type);
+
   void SwapBuffers();
 
  private:
