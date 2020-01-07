@@ -108,22 +108,19 @@ class Game : public InputListener {
 
   Block *world_;
 
-  std::vector<Vertex> vertices_;
-  std::vector<unsigned int> indices_;
-  GLuint vertex_array_;
-  GLuint vertex_buffer_;
-  GLuint element_buffer_;
+  Geometry block_geometry_;
+  GLuint block_vertex_array_;
+  GLuint block_vertex_buffer_[3];
+  GLuint block_element_buffer_;
 
-  std::vector<Vertex> highlight_vertices_;
-  std::vector<unsigned int> highlight_indices_;
+  Geometry highlight_geometry_;
   GLuint highlight_vertex_array_;
-  GLuint highlight_vertex_buffer_;
+  GLuint highlight_vertex_buffer_[2];
   GLuint highlight_element_buffer_;
 
-  std::vector<CrosshairVertex> crosshair_vertices_;
-  std::vector<unsigned int> crosshair_indices_;
+  Geometry crosshair_geometry_;
   GLuint crosshair_vertex_array_;
-  GLuint crosshair_vertex_buffer_;
+  GLuint crosshair_vertex_buffer_[2];
   GLuint crosshair_element_buffer_;
 
   GLuint texture_;

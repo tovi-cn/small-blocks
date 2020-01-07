@@ -55,8 +55,7 @@ static const char *kVertexShaderText =
 "uniform vec3 uColor;\n"
 "layout (location = 0) in vec3 vPos;\n"
 "layout (location = 1) in vec3 vNormal;\n"
-"layout (location = 2) in vec3 vColor;\n"
-"layout (location = 3) in vec2 vTexCoord;\n"
+"layout (location = 2) in vec2 vTexCoord;\n"
 "out vec3 color;\n"
 "out vec2 texCoord;\n"
 "void main() {\n"
@@ -74,7 +73,6 @@ static const char *kVertexShaderText =
 "  if (vNormal.z == 1 || vNormal.z == -1) {\n"
 "    color *= .5;\n"
 "  }\n"
-"  // TODO: color = vColor;\n"
 "  texCoord = vTexCoord;\n"
 "}\n";
 
@@ -108,6 +106,76 @@ static const char *kCrosshairFragmentShaderText =
 "  FragColor = texture(uTexture, texCoord);\n"
 "}\n";
 
+static const std::vector<Geometry::Position> kCubeVertexPositions = {
+  // Front
+  {0, 1, 1}, {1, 1, 1}, {0, 0, 1}, {1, 0, 1},
+  // Back
+  {1, 1, 0}, {0, 1, 0}, {1, 0, 0}, {0, 0, 0},
+  // Left
+  {0, 1, 0}, {0, 1, 1}, {0, 0, 0}, {0, 0, 1},
+  // Right
+  {1, 1, 1}, {1, 1, 0}, {1, 0, 1}, {1, 0, 0},
+  // Top
+  {0, 1, 0}, {1, 1, 0}, {0, 1, 1}, {1, 1, 1},
+  // Bottom
+  {0, 0, 1}, {1, 0, 1}, {0, 0, 0}, {1, 0, 0},
+};
+
+static const std::vector<Geometry::Normal> kCubeVertexNormals = {
+  // Front
+  {0, 0, 1}, {0, 0, 1}, {0, 0, 1}, {0, 0, 1},
+  // Back
+  {0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1},
+  // Left
+  {-1, 0, 0}, {-1, 0, 0}, {-1, 0, 0}, {-1, 0, 0},
+  // Right
+  {1, 0, 0}, {1, 0, 0}, {1, 0, 0}, {1, 0, 0},
+  // Top
+  {0, 1, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0},
+  // Bottom
+  {0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0},
+};
+
+static const std::vector<Geometry::Uv> kCubeVertexUvs = {
+  // Front
+  {0, 1}, {1, 1}, {0, 0}, {1, 0},
+  // Back
+  {0, 1}, {1, 1}, {0, 0}, {1, 0},
+  // Left
+  {0, 1}, {1, 1}, {0, 0}, {1, 0},
+  // Right
+  {0, 1}, {1, 1}, {0, 0}, {1, 0},
+  // Top
+  {0, 1}, {1, 1}, {0, 0}, {1, 0},
+  // Bottom
+  {0, 1}, {1, 1}, {0, 0}, {1, 0},
+};
+
+static const std::vector<unsigned int> kCubeIndices = {
+  // Front
+  2, 1, 0, 2, 3, 1,
+  // Back
+  6, 5, 4, 6, 7, 5,
+  // Left
+  10, 9, 8, 10, 11, 9,
+  // Right
+  14, 13, 12, 14, 15, 13,
+  // Top
+  18, 17, 16, 18, 19, 17,
+  // Bottom
+  22, 21, 20, 22, 23, 21,
+};
+
+static const std::vector<Geometry::Position> kSquareVertexPositions = {
+  {0, 1}, {1, 1}, {0, 0}, {1, 0},
+};
+static const std::vector<Geometry::Uv> kSquareVertexUvs = {
+  {0, 1}, {1, 1}, {0, 0}, {1, 0},
+};
+static const std::vector<unsigned int> kSquareIndices = {
+  2, 1, 0, 2, 3, 1,
+};
+
 Game::Game(Window *window, Renderer *renderer, InputSystem *input)
     : window_(window), renderer_(renderer), input_(input),
       exit_requested_(false),
@@ -124,20 +192,23 @@ Game::Game(Window *window, Renderer *renderer, InputSystem *input)
       placing_(false),
       block_interval_(kBlockInterval), last_block_time_(0),
       ray_cast_hit_(),
-      world_() {}
+      world_(),
+      block_geometry_(),
+      highlight_geometry_(),
+      crosshair_geometry_() {}
 
 Game::~Game() {
   // Deallocate OpenGL objects
-  glDeleteVertexArrays(1, &vertex_array_);
-  glDeleteBuffers(1, &vertex_buffer_);
-  glDeleteBuffers(1, &element_buffer_);
+  glDeleteVertexArrays(1, &block_vertex_array_);
+  glDeleteBuffers(3, block_vertex_buffer_);
+  glDeleteBuffers(1, &block_element_buffer_);
 
   glDeleteVertexArrays(1, &highlight_vertex_array_);
-  glDeleteBuffers(1, &highlight_vertex_buffer_);
+  glDeleteBuffers(2, highlight_vertex_buffer_);
   glDeleteBuffers(1, &highlight_element_buffer_);
 
   glDeleteVertexArrays(1, &crosshair_vertex_array_);
-  glDeleteBuffers(1, &crosshair_vertex_buffer_);
+  glDeleteBuffers(2, crosshair_vertex_buffer_);
   glDeleteBuffers(1, &crosshair_element_buffer_);
 
   glDeleteTextures(1, &texture_);
@@ -158,125 +229,153 @@ bool Game::Initialize() {
 
   // Generate block geometry
 
-  vertices_ = kCubeVertices;
-  indices_ = kCubeIndices;
+  block_geometry_.positions() = kCubeVertexPositions;
+  block_geometry_.normals() = kCubeVertexNormals;
+  block_geometry_.uvs() = kCubeVertexUvs;
+  block_geometry_.indices() = kCubeIndices;
 
-  glGenVertexArrays(1, &vertex_array_);
-  glBindVertexArray(vertex_array_);
+  glGenVertexArrays(1, &block_vertex_array_);
+  glBindVertexArray(block_vertex_array_);
 
-  glGenBuffers(1, &vertex_buffer_);
-  glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer_);
-  glBufferData(GL_ARRAY_BUFFER, vertices_.size() * sizeof(vertices_[0]),
-               &vertices_[0], GL_STATIC_DRAW);
+  glGenBuffers(3, block_vertex_buffer_);
+  glBindBuffer(GL_ARRAY_BUFFER, block_vertex_buffer_[0]);
+  glBufferData(GL_ARRAY_BUFFER,
+               block_geometry_.positions().size()
+                   * sizeof(block_geometry_.positions()[0]),
+               &block_geometry_.positions()[0], GL_STATIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER, block_vertex_buffer_[1]);
+  glBufferData(GL_ARRAY_BUFFER,
+               block_geometry_.normals().size()
+                   * sizeof(block_geometry_.normals()[0]),
+               &block_geometry_.normals()[0], GL_STATIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER, block_vertex_buffer_[2]);
+  glBufferData(GL_ARRAY_BUFFER,
+               block_geometry_.uvs().size() * sizeof(block_geometry_.uvs()[0]),
+               &block_geometry_.uvs()[0], GL_STATIC_DRAW);
 
-  glGenBuffers(1, &element_buffer_);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, element_buffer_);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices_.size() * sizeof(indices_[0]),
-               &indices_[0], GL_STATIC_DRAW);
-
-  // Vertex attributes
-  // (Note that these can be toggled and replaced e.g. with glVertexAttrib3f)
-
-  // Position
+  glBindBuffer(GL_ARRAY_BUFFER, block_vertex_buffer_[0]);
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
-                        sizeof(vertices_[0]),
+                        sizeof(block_geometry_.positions()[0]),
                         reinterpret_cast<void *>(0));
-  // Normal
+  glBindBuffer(GL_ARRAY_BUFFER, block_vertex_buffer_[1]);
   glEnableVertexAttribArray(1);
   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
-                        sizeof(vertices_[0]),
-                        reinterpret_cast<void *>(3 * sizeof(float)));
-  // Color
+                        sizeof(block_geometry_.normals()[0]),
+                        reinterpret_cast<void *>(0));
+  glBindBuffer(GL_ARRAY_BUFFER, block_vertex_buffer_[2]);
   glEnableVertexAttribArray(2);
-  glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
-                        sizeof(vertices_[0]),
-                        reinterpret_cast<void *>(6 * sizeof(float)));
-  // Texture coordinate
-  glEnableVertexAttribArray(3);
-  glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE,
-                        sizeof(vertices_[0]),
-                        reinterpret_cast<void *>(9 * sizeof(float)));
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE,
+                        sizeof(block_geometry_.uvs()[0]),
+                        reinterpret_cast<void *>(0));
+
+  glGenBuffers(1, &block_element_buffer_);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, block_element_buffer_);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+               block_geometry_.indices().size()
+                   * sizeof(block_geometry_.indices()[0]),
+               &block_geometry_.indices()[0], GL_STATIC_DRAW);
 
   glBindVertexArray(0);
 
   // Generate highlight geometry
 
-  highlight_vertices_ = kHighlightVertices;
-  highlight_indices_ = kHighlightIndices;
+  highlight_geometry_.positions() = kCubeVertexPositions;
+  highlight_geometry_.normals() = kCubeVertexNormals;
+  highlight_geometry_.uvs() = kCubeVertexUvs;
+  highlight_geometry_.indices() = kCubeIndices;
 
   glGenVertexArrays(1, &highlight_vertex_array_);
   glBindVertexArray(highlight_vertex_array_);
 
-  glGenBuffers(1, &highlight_vertex_buffer_);
-  glBindBuffer(GL_ARRAY_BUFFER, highlight_vertex_buffer_);
-  glBufferData(GL_ARRAY_BUFFER, highlight_vertices_.size() * sizeof(highlight_vertices_[0]),
-               &highlight_vertices_[0], GL_STATIC_DRAW);
+  glGenBuffers(3, highlight_vertex_buffer_);
+  glBindBuffer(GL_ARRAY_BUFFER, highlight_vertex_buffer_[0]);
+  glBufferData(GL_ARRAY_BUFFER,
+               highlight_geometry_.positions().size()
+                   * sizeof(highlight_geometry_.positions()[0]),
+               &highlight_geometry_.positions()[0], GL_STATIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER, highlight_vertex_buffer_[1]);
+  glBufferData(GL_ARRAY_BUFFER,
+               highlight_geometry_.normals().size()
+                   * sizeof(highlight_geometry_.normals()[0]),
+               &highlight_geometry_.normals()[0], GL_STATIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER, highlight_vertex_buffer_[2]);
+  glBufferData(GL_ARRAY_BUFFER,
+               highlight_geometry_.uvs().size()
+                   * sizeof(highlight_geometry_.uvs()[0]),
+               &highlight_geometry_.uvs()[0], GL_STATIC_DRAW);
+
+  glBindBuffer(GL_ARRAY_BUFFER, highlight_vertex_buffer_[0]);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
+                        sizeof(highlight_geometry_.positions()[0]),
+                        reinterpret_cast<void *>(0));
+  glBindBuffer(GL_ARRAY_BUFFER, highlight_vertex_buffer_[1]);
+  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
+                        sizeof(highlight_geometry_.normals()[0]),
+                        reinterpret_cast<void *>(0));
+  glBindBuffer(GL_ARRAY_BUFFER, highlight_vertex_buffer_[2]);
+  glEnableVertexAttribArray(2);
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE,
+                        sizeof(highlight_geometry_.uvs()[0]),
+                        reinterpret_cast<void *>(0));
 
   glGenBuffers(1, &highlight_element_buffer_);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, highlight_element_buffer_);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, highlight_indices_.size() * sizeof(highlight_indices_[0]),
-               &highlight_indices_[0], GL_STATIC_DRAW);
-
-  // Vertex attributes
-  // (Note that these can be toggled and replaced e.g. with glVertexAttrib3f)
-
-  // Position
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
-                        sizeof(highlight_vertices_[0]),
-                        reinterpret_cast<void *>(0));
-  // Normal
-  glEnableVertexAttribArray(1);
-  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
-                        sizeof(highlight_vertices_[0]),
-                        reinterpret_cast<void *>(3 * sizeof(float)));
-  // Color
-  glEnableVertexAttribArray(2);
-  glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
-                        sizeof(highlight_vertices_[0]),
-                        reinterpret_cast<void *>(6 * sizeof(float)));
-  // Texture coordinate
-  glEnableVertexAttribArray(3);
-  glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE,
-                        sizeof(highlight_vertices_[0]),
-                        reinterpret_cast<void *>(9 * sizeof(float)));
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+               highlight_geometry_.indices().size()
+                   * sizeof(highlight_geometry_.indices()[0]),
+               &highlight_geometry_.indices()[0], GL_STATIC_DRAW);
 
   glBindVertexArray(0);
 
-  // Generate crosshair geometry
+  // Crosshair geometry
 
-  crosshair_vertices_ = kCrosshairVertices;
-  crosshair_indices_ = kCrosshairIndices;
+  crosshair_geometry_.positions() = kSquareVertexPositions;
+  crosshair_geometry_.uvs() = kSquareVertexUvs;
+  crosshair_geometry_.indices() = kSquareIndices;
 
   glGenVertexArrays(1, &crosshair_vertex_array_);
   glBindVertexArray(crosshair_vertex_array_);
 
-  glGenBuffers(1, &crosshair_vertex_buffer_);
-  glBindBuffer(GL_ARRAY_BUFFER, crosshair_vertex_buffer_);
-  glBufferData(GL_ARRAY_BUFFER, crosshair_vertices_.size() * sizeof(crosshair_vertices_[0]),
-               &crosshair_vertices_[0], GL_STATIC_DRAW);
+  glGenBuffers(2, crosshair_vertex_buffer_);
+
+  glBindBuffer(GL_ARRAY_BUFFER, crosshair_vertex_buffer_[0]);
+  glBufferData(GL_ARRAY_BUFFER,
+               crosshair_geometry_.positions().size()
+                   * sizeof(crosshair_geometry_.positions()[0]),
+               &crosshair_geometry_.positions()[0], GL_STATIC_DRAW);
+
+  glBindBuffer(GL_ARRAY_BUFFER, crosshair_vertex_buffer_[1]);
+  glBufferData(GL_ARRAY_BUFFER,
+               crosshair_geometry_.uvs().size()
+                   * sizeof(crosshair_geometry_.uvs()[0]),
+               &crosshair_geometry_.uvs()[0], GL_STATIC_DRAW);
+
+  glBindBuffer(GL_ARRAY_BUFFER, crosshair_vertex_buffer_[0]);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
+                        sizeof(crosshair_geometry_.positions()[0]),
+                        reinterpret_cast<void *>(0));
+  glBindBuffer(GL_ARRAY_BUFFER, crosshair_vertex_buffer_[1]);
+  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
+                        sizeof(crosshair_geometry_.uvs()[0]),
+                        reinterpret_cast<void *>(0));
 
   glGenBuffers(1, &crosshair_element_buffer_);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, crosshair_element_buffer_);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, crosshair_indices_.size() * sizeof(crosshair_indices_[0]),
-               &crosshair_indices_[0], GL_STATIC_DRAW);
-
-  // Vertex attributes
-  // (Note that these can be toggled and replaced e.g. with glVertexAttrib3f)
-
-  // Position
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
-                        sizeof(crosshair_vertices_[0]),
-                        reinterpret_cast<void *>(0));
-  // Texture coordinate
-  glEnableVertexAttribArray(1);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
-                        sizeof(crosshair_vertices_[0]),
-                        reinterpret_cast<void *>(2 * sizeof(float)));
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+               crosshair_geometry_.indices().size()
+                   * sizeof(crosshair_geometry_.indices()[0]),
+               &crosshair_geometry_.indices()[0], GL_STATIC_DRAW);
 
   glBindVertexArray(0);
+
+  // Assets
+
+  LoadAssets();
 
   // Create world
 
@@ -370,11 +469,10 @@ void Game::LoadAssets() {
 
   // Load shaders
 
-  shader_program_ =
-      renderer_->CreateShaderProgram(kVertexShaderText, kFragmentShaderText);
-  crosshair_shader_program_ =
-      renderer_->CreateShaderProgram(kCrosshairVertexShaderText,
-                                     kCrosshairFragmentShaderText);
+  shader_program_ = renderer_->CreateShaderProgram(
+      kVertexShaderText, kFragmentShaderText);
+  crosshair_shader_program_ = renderer_->CreateShaderProgram(
+      kCrosshairVertexShaderText, kCrosshairFragmentShaderText);
 }
 
 void Game::Run() {
@@ -399,8 +497,6 @@ void Game::Update(float delta_time) {
     return;
   }
 
-  double mouse_x;
-  double mouse_y;
   glm::vec2 mouse_position = input_->mouse_position();
   glm::vec2 mouse_delta = mouse_position - mouse_last_position_;
   mouse_last_position_ = mouse_position;
@@ -769,9 +865,11 @@ void Game::DrawBlock(Block *block, float x, float y, float z, float size) {
     glUseProgram(0);
 
     glUseProgram(shader_program_);
-    glBindVertexArray(vertex_array_);
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices_.size()),
-                   GL_UNSIGNED_INT, reinterpret_cast<void *>(0));
+    glBindVertexArray(block_vertex_array_);
+    glDrawElements(GL_TRIANGLES,
+                   static_cast<GLsizei>(block_geometry_.indices().size()),
+                   GL_UNSIGNED_INT,
+                   reinterpret_cast<void *>(0));
     glBindVertexArray(0);
     glUseProgram(0);
   }
@@ -823,8 +921,10 @@ void Game::DrawHighlight() {
 
   glUseProgram(shader_program_);
   glBindVertexArray(highlight_vertex_array_);
-  glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(highlight_indices_.size()),
-                 GL_UNSIGNED_INT, reinterpret_cast<void *>(0));
+  glDrawElements(GL_TRIANGLES,
+                 static_cast<GLsizei>(highlight_geometry_.indices().size()),
+                 GL_UNSIGNED_INT,
+                 reinterpret_cast<void *>(0));
   glBindVertexArray(0);
   glUseProgram(0);
 }
@@ -859,8 +959,10 @@ void Game::DrawCrosshair() {
 
   glUseProgram(crosshair_shader_program_);
   glBindVertexArray(crosshair_vertex_array_);
-  glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(crosshair_indices_.size()),
-                 GL_UNSIGNED_INT, reinterpret_cast<void *>(0));
+  glDrawElements(GL_TRIANGLES,
+                 static_cast<GLsizei>(crosshair_geometry_.indices().size()),
+                 GL_UNSIGNED_INT,
+                 reinterpret_cast<void *>(0));
   glBindVertexArray(0);
   glUseProgram(0);
 }

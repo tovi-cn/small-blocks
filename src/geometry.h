@@ -18,107 +18,47 @@
 
 #include <vector>
 
-struct Vertex {
-  // Position
-  float x;
-  float y;
-  float z;
+class Geometry {
+ public:
+  struct Position {
+    float x;
+    float y;
+    float z;
+  };
 
-  // Normal
-  float nx;
-  float ny;
-  float nz;
+  struct Normal {
+    float x;
+    float y;
+    float z;
+  };
 
-  // Color
-  float r;
-  float g;
-  float b;
+  struct Uv {
+    float x;
+    float y;
+  };
 
-  // Texture coordinates
-  float u;
-  float v;
-};
+  struct Color {
+    float x;
+    float y;
+    float z;
+  };
 
-struct CrosshairVertex {
-  float x;
-  float y;
+  Geometry();
+  ~Geometry();
 
-  float u;
-  float v;
-};
+  std::vector<Position> &positions() { return positions_; }
+  std::vector<Normal> &normals() { return normals_; }
+  std::vector<Uv> &uvs() { return uvs_; }
+  std::vector<Color> &colors() { return colors_; }
+  std::vector<unsigned int> &indices() { return indices_; }
 
-// TODO: Use non-interleaved buffers for increased readability.
+ private:
+  std::vector<Position> positions_;
+  std::vector<Normal> normals_;
+  std::vector<Uv> uvs_;
+  std::vector<Color> colors_;
 
-extern const std::vector<Vertex> kCubeVertices;
-extern const std::vector<unsigned int> kCubeIndices;
-
-static const std::vector<CrosshairVertex> kCrosshairVertices = {
-  {0, 1,  0, 1},
-  {1, 1,  1, 1},
-  {0, 0,  0, 0},
-  {1, 0,  1, 0},
-};
-
-static const std::vector<unsigned int> kCrosshairIndices = {
-  2, 1, 0, 2, 3, 1,
-};
-
-static const std::vector<Vertex> kHighlightVertices = {
-  // Front
-  {0, 1, 1, 0, 0, 1, 1, 0, 0,  0, 1},
-  {1, 1, 1, 0, 0, 1, 1, 0, 0,  1, 1},
-  {0, 0, 1, 0, 0, 1, 1, 0, 0,  0, 0},
-  {1, 0, 1, 0, 0, 1, 1, 0, 0,  1, 0},
-
-  // Back
-  {1, 1, 0, 0, 0, -1, 1, 0, 0,  0, 1},
-  {0, 1, 0, 0, 0, -1, 1, 0, 0,  1, 1},
-  {1, 0, 0, 0, 0, -1, 1, 0, 0,  0, 0},
-  {0, 0, 0, 0, 0, -1, 1, 0, 0,  1, 0},
-
-  // Left
-  {0, 1, 0, -1, 0, 0, 0, 1, 0,  0, 1},
-  {0, 1, 1, -1, 0, 0, 0, 1, 0,  1, 1},
-  {0, 0, 0, -1, 0, 0, 0, 1, 0,  0, 0},
-  {0, 0, 1, -1, 0, 0, 0, 1, 0,  1, 0},
-
-  // Right
-  {1, 1, 1, 1, 0, 0, 0, 1, 0,  0, 1},
-  {1, 1, 0, 1, 0, 0, 0, 1, 0,  1, 1},
-  {1, 0, 1, 1, 0, 0, 0, 1, 0,  0, 0},
-  {1, 0, 0, 1, 0, 0, 0, 1, 0,  1, 0},
-
-  // Top
-  {0, 1, 0, 0, 1, 0, 0, 0, 1,  0, 1},
-  {1, 1, 0, 0, 1, 0, 0, 0, 1,  1, 1},
-  {0, 1, 1, 0, 1, 0, 0, 0, 1,  0, 0},
-  {1, 1, 1, 0, 1, 0, 0, 0, 1,  1, 0},
-
-  // Bottom
-  {0, 0, 1, 0, -1, 0, 0, 0, 1,  0, 1},
-  {1, 0, 1, 0, -1, 0, 0, 0, 1,  1, 1},
-  {0, 0, 0, 0, -1, 0, 0, 0, 1,  0, 0},
-  {1, 0, 0, 0, -1, 0, 0, 0, 1,  1, 0},
-};
-
-static const std::vector<unsigned int> kHighlightIndices = {
-  // Front
-  2, 1, 0, 2, 3, 1,
-
-  // Back
-  6, 5, 4, 6, 7, 5,
-
-  // Left
-  10, 9, 8, 10, 11, 9,
-
-  // Right
-  14, 13, 12, 14, 15, 13,
-
-  // Top
-  18, 17, 16, 18, 19, 17,
-
-  // Bottom
-  22, 21, 20, 22, 23, 21,
+  std::vector<unsigned int> indices_;
 };
 
 #endif  // GEOMETRY_H_
