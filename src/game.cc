@@ -178,7 +178,6 @@ static const std::vector<unsigned int> kSquareIndices = {
 
 Game::Game(Window *window, Renderer *renderer, InputSystem *input)
     : window_(window), renderer_(renderer), input_(input),
-      exit_requested_(false),
       window_focused_(false),
       mouse_last_position_(0.0),
       wireframe_(false),
@@ -479,7 +478,7 @@ void Game::Run() {
   mouse_last_position_ = input_->mouse_position();
   double last_time = input_->GetTime();
 
-  while (!exit_requested_) {
+  while (!input_->is_exit_requested()) {
     double current_time = input_->GetTime();
     float delta_time = static_cast<float>(current_time - last_time);
     last_time = current_time;
@@ -492,11 +491,6 @@ void Game::Run() {
 }
 
 void Game::Update(float delta_time) {
-  if (input_->is_exit_requested()) {
-    exit_requested_ = true;
-    return;
-  }
-
   glm::vec2 mouse_position = input_->mouse_position();
   glm::vec2 mouse_delta = mouse_position - mouse_last_position_;
   mouse_last_position_ = mouse_position;

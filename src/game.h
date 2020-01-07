@@ -86,7 +86,6 @@ class Game : public InputListener {
   Renderer *renderer_;
   InputSystem *input_;
 
-  bool exit_requested_;
   bool window_focused_;
   glm::vec2 mouse_last_position_;
 
