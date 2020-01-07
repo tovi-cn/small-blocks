@@ -107,7 +107,7 @@ void InputSystem::OnScrollEvent(GLFWwindow *window, double x_offset,
                                 double y_offset) {
   InputSystem *input =
       static_cast<InputSystem *>(glfwGetWindowUserPointer(window));
-  input->Scroll(y_offset);
+  input->Scroll(static_cast<float>(y_offset));
 }
 
 void InputSystem::OnKeyEvent(GLFWwindow *window, int key, int scancode,
