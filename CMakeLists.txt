@@ -39,9 +39,13 @@ add_executable(small-blocks
   src/fractals.cc
   src/game.cc
   src/geometry.cc
+  src/input_system.cc
   src/main.cc
+  src/renderer.cc
   src/utilities.cc
+  src/window.cc
   )
+
 target_link_libraries(small-blocks
   glad
   glfw

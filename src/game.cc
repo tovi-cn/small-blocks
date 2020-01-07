@@ -88,9 +88,9 @@ static const char *kCrosshairFragmentShaderText =
 "  FragColor = texture(uTexture, texCoord);\n"
 "}\n";
 
-Game::Game()
-    : window_(nullptr), window_focused_(false),
-      pressed_keys_(),
+Game::Game(Window &window, Renderer &renderer, InputSystem &input)
+    : window_(window), renderer_(renderer), input_(input),
+      window_focused_(false),
       mouse_last_x_(0.0), mouse_last_y_(0.0),
       wireframe_(false),
       camera_position_(0.0f), camera_rotation_(0.0f),
@@ -126,58 +126,16 @@ Game::~Game() {
   glDeleteProgram(shader_program_);
   glDeleteProgram(crosshair_shader_program_);
 
-  glfwDestroyWindow(window_);
-  glfwTerminate();
-
   delete world_;
 }
 
 bool Game::Initialize() {
-  // Random
-
   SeedRandom();
 
-  // Initialize Window
+  input_.AddListener(this);
 
-  glfwSetErrorCallback(OnGlfwError);
-  if (!glfwInit()) {
-    return false;
-  }
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-  window_ = glfwCreateWindow(800, 600, "Small Blocks", nullptr, nullptr);
-  if (!window_) {
-    glfwTerminate();
-    return false;
-  }
-
-  glfwSetMouseButtonCallback(window_, OnMouseButtonEvent);
-  glfwSetScrollCallback(window_, OnScrollEvent);
-  glfwSetKeyCallback(window_, OnKeyEvent);
-
-  glfwSetWindowUserPointer(window_, this);
-
-  glfwMaximizeWindow(window_);
+  window_.Maximize();
   FocusWindow();
-
-  // Initialize OpenGL
-
-  glfwMakeContextCurrent(window_);
-  if (!gladLoadGL()) {
-    glfwTerminate();
-    return false;
-  }
-  glfwSwapInterval(0);
-
-	glEnable(GL_DEBUG_OUTPUT);
-	glDebugMessageCallback(OnGlError, 0);
-
-  glEnable(GL_DEPTH_TEST);
-  glEnable(GL_CULL_FACE);
-  glCullFace(GL_BACK);
-
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
   // Generate block geometry
 
@@ -448,10 +406,10 @@ GLuint Game::CreateShaderProgram(const char *vertex_shader_text,
 }
 
 void Game::Run() {
-  glfwGetCursorPos(window_, &mouse_last_x_, &mouse_last_y_);
+  glfwGetCursorPos(window_.window_glfw(), &mouse_last_x_, &mouse_last_y_);
   double last_time = glfwGetTime();
 
-  while (!glfwWindowShouldClose(window_)) {
+  while (!glfwWindowShouldClose(window_.window_glfw())) {
     double current_time = glfwGetTime();
     float delta_time = static_cast<float>(current_time - last_time);
     last_time = current_time;
@@ -466,7 +424,7 @@ void Game::Run() {
 void Game::Update(float delta_time) {
   double mouse_x;
   double mouse_y;
-  glfwGetCursorPos(window_, &mouse_x, &mouse_y);
+  glfwGetCursorPos(window_.window_glfw(), &mouse_x, &mouse_y);
   float mouse_delta_x = static_cast<float>(mouse_x - mouse_last_x_);
   float mouse_delta_y = static_cast<float>(mouse_y - mouse_last_y_);
   mouse_last_x_ = mouse_x;
@@ -488,26 +446,26 @@ void Game::Update(float delta_time) {
     glm::vec3 right = glm::normalize(glm::cross(forward, up));
 
     glm::vec3 direction(0.0f);
-    if (pressed_keys_.test(GLFW_KEY_W)) {
+    if (input_.key_is_pressed(GLFW_KEY_W)) {
       direction += forward;
     }
-    if (pressed_keys_.test(GLFW_KEY_S)) {
+    if (input_.key_is_pressed(GLFW_KEY_S)) {
       direction -= forward;
     }
-    if (pressed_keys_.test(GLFW_KEY_A)) {
+    if (input_.key_is_pressed(GLFW_KEY_A)) {
       direction -= right;
     }
-    if (pressed_keys_.test(GLFW_KEY_D)) {
+    if (input_.key_is_pressed(GLFW_KEY_D)) {
       direction += right;
     }
     if (direction != glm::vec3(0.0f)) {
       player_position_ += glm::normalize(direction) * speed_ * delta_time;
     }
 
-    if (pressed_keys_.test(GLFW_KEY_SPACE)) {
+    if (input_.key_is_pressed(GLFW_KEY_SPACE)) {
       player_position_ += up * speed_ * delta_time;
     }
-    if (pressed_keys_.test(GLFW_KEY_LEFT_SHIFT)) {
+    if (input_.key_is_pressed(GLFW_KEY_LEFT_SHIFT)) {
       player_position_ -= up * speed_ * delta_time;
     }
   }
@@ -760,16 +718,24 @@ void Game::SetColor(int color) {
   color_ = color;
 }
 
+void Game::FocusWindow() {
+  window_focused_ = true;
+  window_.SetCursorEnabled(false);
+}
+
+void Game::UnfocusWindow() {
+  window_focused_ = false;
+  window_.SetCursorEnabled(true);
+}
+
 void Game::Render() {
-  int window_width;
-  int window_height;
-  glfwGetFramebufferSize(window_, &window_width, &window_height);
-  float aspect = static_cast<float>(window_width) / window_height;
-  glViewport(0, 0, window_width, window_height);
+  glm::ivec2 window_size = window_.size();
+  glViewport(0, 0, window_size.x, window_size.y);
 
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   float fov = 90.0f;
+  float aspect = static_cast<float>(window_size.x) / window_size.y;
   float near = 0.01f;
   float far = 500.0f;
   glm::mat4 projection_matrix =
@@ -796,7 +762,7 @@ void Game::Render() {
 
   DrawCrosshair();
 
-  glfwSwapBuffers(window_);
+  renderer_.SwapBuffers();
 }
 
 void Game::DrawBlock(Block *block, float x, float y, float z, float size) {
@@ -889,22 +855,20 @@ void Game::DrawHighlight() {
 }
 
 void Game::DrawCrosshair() {
-  int window_width;
-  int window_height;
-  glfwGetFramebufferSize(window_, &window_width, &window_height);
+  glm::ivec2 window_size = window_.size();
 
   glm::mat4 model_matrix(1.0f);
 
-  float size = 0.025f * window_height;
+  float size = 0.025f * window_size.y;
   model_matrix = glm::scale(glm::vec3(size)) * model_matrix;
 
-  glm::vec2 center(window_width / 2.0f - size / 2.0f,
-                   window_height / 2.0f - size / 2.0f);
+  glm::vec2 center(window_size.x / 2.0f - size / 2.0f,
+                   window_size.y / 2.0f - size / 2.0f);
   model_matrix = glm::translate(glm::vec3(center, 0.0f)) * model_matrix;
 
   model_matrix =
-      glm::ortho(0.0f, static_cast<float>(window_width),
-                 0.0f, static_cast<float>(window_height), 0.0f, 0.01f)
+      glm::ortho(0.0f, static_cast<float>(window_size.x),
+                 0.0f, static_cast<float>(window_size.y), 0.0f, 0.01f)
       * model_matrix;
 
   glUseProgram(crosshair_shader_program_);
@@ -944,7 +908,6 @@ glm::mat4 Game::GetCameraViewMatrix() const {
 }
 
 void Game::MouseDown(int button) {
-  pressed_mouse_buttons_.set(button);
   FocusWindow();
 
   if (button == GLFW_MOUSE_BUTTON_LEFT) {
@@ -965,8 +928,6 @@ void Game::MouseDown(int button) {
 }
 
 void Game::MouseUp(int button) {
-  pressed_mouse_buttons_.reset(button);
-
   if (button == GLFW_MOUSE_BUTTON_LEFT) {
     breaking_ = false;
   }
@@ -984,10 +945,6 @@ void Game::Scroll(float offset) {
 }
 
 void Game::KeyDown(int key) {
-  if (key >= 0) {
-    pressed_keys_.set(key);
-  }
-
   if (key == GLFW_KEY_Q) {
     ShrinkSize();
   }
@@ -1030,79 +987,4 @@ void Game::KeyDown(int key) {
 }
 
 void Game::KeyUp(int key) {
-  if (key >= 0) {
-    pressed_keys_.reset(key);
-  }
-}
-
-void Game::FocusWindow() {
-  window_focused_ = true;
-  glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-  if (glfwRawMouseMotionSupported()) {
-    glfwSetInputMode(window_, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
-  }
-}
-
-void Game::UnfocusWindow() {
-  window_focused_ = false;
-  glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-  if (glfwRawMouseMotionSupported()) {
-    glfwSetInputMode(window_, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
-  }
-}
-
-//
-// External event handling
-//
-
-void Game::OnMouseButtonEvent(GLFWwindow *window, int button,
-                              int action, int mods) {
-  (void)mods;
-
-  Game *game = static_cast<Game *>(glfwGetWindowUserPointer(window));
-  if (action == GLFW_PRESS) {
-    game->MouseDown(button);
-  } else if (action == GLFW_RELEASE) {
-    game->MouseUp(button);
-  }
-}
-
-void Game::OnScrollEvent(GLFWwindow *window, double x_offset, double y_offset) {
-  Game *game = static_cast<Game *>(glfwGetWindowUserPointer(window));
-  game->Scroll(y_offset);
-}
-
-void Game::OnKeyEvent(GLFWwindow *window, int key, int scancode,
-                      int action, int mods) {
-  (void)scancode;
-  (void)mods;
-
-  Game *game = static_cast<Game *>(glfwGetWindowUserPointer(window));
-  if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-    game->KeyDown(key);
-  } else if (action == GLFW_RELEASE) {
-    game->KeyUp(key);
-  }
-}
-
-void Game::OnGlfwError(int error, const char *description) {
-  (void)error;
-  std::cerr << "Error: " << description << "\n";
-}
-
-void GLAPIENTRY Game::OnGlError(GLenum source,
-                                GLenum type,
-                                GLuint id,
-                                GLenum severity,
-                                GLsizei length,
-                                const GLchar *message,
-                                const void *user_param) {
-  (void)source;
-  (void)id;
-  (void)length;
-  (void)user_param;
-  std::cerr << "GL CALLBACK: " << (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : "")
-            << ", type = 0x" << type
-            << ", severity = 0x" << severity
-            << ", message = " << message << "\n";
 }

@@ -16,9 +16,25 @@
 #include <iostream>
 
 #include "game.h"
+#include "input_system.h"
+#include "renderer.h"
+#include "window.h"
 
 int main() {
-  Game game;
+  Window window;
+  if (!window.Initialize("Small Blocks")) {
+    return 1;
+  }
+
+  Renderer renderer(window);
+  if (!renderer.Initialize()) {
+    return 1;
+  }
+
+  InputSystem input(window);
+  input.Initialize();
+
+  Game game(window, renderer, input);
   if (!game.Initialize()) {
     return 1;
   }

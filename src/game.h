@@ -16,7 +16,6 @@
 #ifndef GAME_H_
 #define GAME_H_
 
-#include <bitset>
 #include <string>
 #include <vector>
 
@@ -28,8 +27,11 @@
 
 #include "block.h"
 #include "geometry.h"
+#include "input_system.h"
+#include "renderer.h"
+#include "window.h"
 
-class Game {
+class Game : public InputListener {
  public:
   struct RayCastHit {
     Block *block;
@@ -58,7 +60,7 @@ class Game {
 
   static constexpr double kBlockInterval = 0.25;
 
-  Game();
+  Game(Window &window, Renderer &renderer, InputSystem &input);
   ~Game();
 
   bool Initialize();
@@ -79,11 +81,14 @@ class Game {
   void GrowBlock();
   void SetColor(int color);
 
-  void MouseDown(int button);
-  void MouseUp(int button);
-  void Scroll(float offset);
-  void KeyDown(int key);
-  void KeyUp(int key);
+  void FocusWindow();
+  void UnfocusWindow();
+
+  virtual void MouseDown(int button);
+  virtual void MouseUp(int button);
+  virtual void Scroll(float offset);
+  virtual void KeyDown(int key);
+  virtual void KeyUp(int key);
 
  private:
   GLuint CreateShader(const char *text, GLenum type);
@@ -99,28 +104,11 @@ class Game {
   glm::vec3 GetCameraForward() const;
   glm::mat4 GetCameraViewMatrix() const;
 
-  void FocusWindow();
-  void UnfocusWindow();
+  Window &window_;
+  Renderer &renderer_;
+  InputSystem &input_;
 
-  static void OnMouseButtonEvent(GLFWwindow *window, int button,
-                                 int action, int mods);
-  static void OnScrollEvent(GLFWwindow *window, double x_offset,
-                            double y_offset);
-  static void OnKeyEvent(GLFWwindow *window, int key, int scancode,
-                         int action, int mods);
-  static void OnGlfwError(int error, const char *description);
-  static void GLAPIENTRY OnGlError(GLenum source,
-                                   GLenum type,
-                                   GLuint id,
-                                   GLenum severity,
-                                   GLsizei length,
-                                   const GLchar *message,
-                                   const void *user_param);
-
-  GLFWwindow *window_;
   bool window_focused_;
-  std::bitset<32> pressed_mouse_buttons_;
-  std::bitset<1024> pressed_keys_;
   double mouse_last_x_;
   double mouse_last_y_;
 
