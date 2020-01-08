@@ -60,6 +60,8 @@ bool Renderer::Initialize() {
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+  glClearColor(0.0f, 0.0f, 0.0f, 0.5f);
+
   return true;
 }
 
@@ -71,12 +73,14 @@ void Renderer::AddMesh(Mesh *mesh) {
   render_list_.push_back(mesh);
 }
 
-void Renderer::Render() {
+void Renderer::ClearScreen() {
   glm::ivec2 window_size = window_->GetSize();
   glViewport(0, 0, window_size.x, window_size.y);
 
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
 
+void Renderer::Render() {
   for (auto mesh : render_list_) {
     RenderMesh(mesh);
   }

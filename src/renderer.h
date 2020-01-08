@@ -34,6 +34,7 @@ class Renderer {
 
   void AddMesh(Mesh *mesh);
 
+  void ClearScreen();
   void Render();
   void RenderMesh(Mesh *mesh);
   void SwapBuffers();

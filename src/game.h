@@ -72,6 +72,8 @@ class Game : public InputListener {
   void LoadAssets();
 
   void Update(float delta_time);
+  void UpdatePlayer(float delta_time);
+
   void Render();
   void DrawBlock(Block *block, float x, float y, float z, float size);
   void DrawHighlight();
@@ -83,6 +85,7 @@ class Game : public InputListener {
 
   bool window_focused_;
   glm::vec2 mouse_last_position_;
+  glm::vec2 mouse_delta_;
 
   float wireframe_;
 

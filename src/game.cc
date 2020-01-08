@@ -46,16 +46,17 @@ static const double kBlockInterval = 0.25;
 Game::Game(Window *window, Renderer *renderer, InputSystem *input)
     : window_(window), renderer_(renderer), input_(input),
       window_focused_(false),
-      mouse_last_position_(0.0),
+      mouse_last_position_(0.0f),
+      mouse_delta_(0.0f),
       wireframe_(false),
       player_position_(0.0f), player_rotation_(0.0f),
       size_dimension_(kDefaultSizeDimension),
       block_dimension_(kDefaultBlockDimension),
-      speed_(0),
+      speed_(0.0f),
       color_(kDefaultColor),
       breaking_(false),
       placing_(false),
-      block_interval_(kBlockInterval), last_block_time_(0),
+      block_interval_(kBlockInterval), last_block_time_(0.0),
       ray_cast_hit_(),
       world_(),
       block_geometry_(),
@@ -70,17 +71,17 @@ Game::Game(Window *window, Renderer *renderer, InputSystem *input)
       {}
 
 Game::~Game() {
-  delete block_mesh_;
-  delete highlight_mesh_;
-  delete crosshair_mesh_;
+  glDeleteProgram(block_shader_program_);
+  glDeleteProgram(highlight_shader_program_);
+  glDeleteProgram(crosshair_shader_program_);
 
   glDeleteTextures(1, &block_texture_);
   glDeleteTextures(1, &highlight_texture_);
   glDeleteTextures(1, &crosshair_texture_);
 
-  glDeleteProgram(block_shader_program_);
-  glDeleteProgram(highlight_shader_program_);
-  glDeleteProgram(crosshair_shader_program_);
+  delete block_mesh_;
+  delete highlight_mesh_;
+  delete crosshair_mesh_;
 
   delete world_;
 }
@@ -195,62 +196,15 @@ void Game::Run() {
 
 void Game::Update(float delta_time) {
   glm::vec2 mouse_position = input_->GetMousePosition();
-  glm::vec2 mouse_delta = mouse_position - mouse_last_position_;
+  mouse_delta_ = mouse_position - mouse_last_position_;
   mouse_last_position_ = mouse_position;
+  if (!window_focused_) {
+    mouse_delta_ = glm::vec2(0.0f);
+  }
 
   speed_ = glm::pow(2.0f, -size_dimension_);
 
-  if (window_focused_) {
-    float mouse_sensitivity = 0.005f;
-    player_rotation_.x += -mouse_delta.y * mouse_sensitivity;
-    player_rotation_.y += -mouse_delta.x * mouse_sensitivity;
-    player_rotation_.x = glm::clamp(player_rotation_.x, glm::radians(-89.99f),
-                                    glm::radians(89.99f));
-
-    glm::vec3 forward = renderer_->GetCameraForward();
-    forward.y = 0.0f;
-    forward = glm::normalize(forward);
-    glm::vec3 up(0.0f, 1.0f, 0.0f);
-    glm::vec3 right = glm::normalize(glm::cross(forward, up));
-
-    glm::vec3 direction(0.0f);
-    if (input_->KeyIsPressed(KEY_W)) {
-      direction += forward;
-    }
-    if (input_->KeyIsPressed(KEY_S)) {
-      direction -= forward;
-    }
-    if (input_->KeyIsPressed(KEY_A)) {
-      direction -= right;
-    }
-    if (input_->KeyIsPressed(KEY_D)) {
-      direction += right;
-    }
-    if (direction != glm::vec3(0.0f)) {
-      player_position_ += glm::normalize(direction) * speed_ * delta_time;
-    }
-
-    if (input_->KeyIsPressed(KEY_SPACE)) {
-      player_position_ += up * speed_ * delta_time;
-    }
-    if (input_->KeyIsPressed(KEY_LEFT_SHIFT)) {
-      player_position_ -= up * speed_ * delta_time;
-    }
-  }
-
-  player_position_.x =
-      glm::clamp(player_position_.x, -kWorldSize, 2 * kWorldSize);
-  player_position_.y =
-      glm::clamp(player_position_.y, -kWorldSize, 2 * kWorldSize);
-  player_position_.z =
-      glm::clamp(player_position_.z, -kWorldSize, 2 * kWorldSize);
-
-  glm::vec3 camera_position = player_position_;
-  // TODO: float player_height = glm::pow(2.0f, -size_dimension_);
-  float player_height = 1.0f;
-  camera_position.y += player_height;
-  renderer_->set_camera_position(camera_position);
-  renderer_->set_camera_rotation(player_rotation_);
+  UpdatePlayer(delta_time);
 
   ray_cast_hit_ = RayCastBlock();
 
@@ -284,6 +238,58 @@ void Game::Update(float delta_time) {
   } else {
     highlight_mesh_->set_hidden(true);
   }
+}
+
+void Game::UpdatePlayer(float delta_time) {
+  float mouse_sensitivity = 0.005f;
+  player_rotation_.x += -mouse_delta_.y * mouse_sensitivity;
+  player_rotation_.y += -mouse_delta_.x * mouse_sensitivity;
+  player_rotation_.x = glm::clamp(player_rotation_.x, glm::radians(-89.99f),
+      glm::radians(89.99f));
+
+  glm::vec3 forward = renderer_->GetCameraForward();
+  forward.y = 0.0f;
+  forward = glm::normalize(forward);
+  glm::vec3 up(0.0f, 1.0f, 0.0f);
+  glm::vec3 right = glm::normalize(glm::cross(forward, up));
+
+  glm::vec3 direction(0.0f);
+  if (input_->KeyIsPressed(KEY_W)) {
+    direction += forward;
+  }
+  if (input_->KeyIsPressed(KEY_S)) {
+    direction -= forward;
+  }
+  if (input_->KeyIsPressed(KEY_A)) {
+    direction -= right;
+  }
+  if (input_->KeyIsPressed(KEY_D)) {
+    direction += right;
+  }
+  if (direction != glm::vec3(0.0f)) {
+    player_position_ += glm::normalize(direction) * speed_ * delta_time;
+  }
+
+  if (input_->KeyIsPressed(KEY_SPACE)) {
+    player_position_ += up * speed_ * delta_time;
+  }
+  if (input_->KeyIsPressed(KEY_LEFT_SHIFT)) {
+    player_position_ -= up * speed_ * delta_time;
+  }
+
+  player_position_.x =
+      glm::clamp(player_position_.x, -kWorldSize, 2 * kWorldSize);
+  player_position_.y =
+      glm::clamp(player_position_.y, -kWorldSize, 2 * kWorldSize);
+  player_position_.z =
+      glm::clamp(player_position_.z, -kWorldSize, 2 * kWorldSize);
+
+  glm::vec3 camera_position = player_position_;
+  // TODO: float player_height = glm::pow(2.0f, -size_dimension_);
+  float player_height = 1.0f;
+  camera_position.y += player_height;
+  renderer_->set_camera_position(camera_position);
+  renderer_->set_camera_rotation(player_rotation_);
 }
 
 void Game::GenerateWorld() {
@@ -522,17 +528,11 @@ void Game::Render() {
   glm::ivec2 window_size = window_->GetSize();
   renderer_->set_aspect(static_cast<float>(window_size.x) / window_size.y);
 
-  renderer_->Render();
+  renderer_->ClearScreen();
 
-  glm::mat4 view_projection_matrix = renderer_->GetViewProjectionMatrix();
-
-  glUseProgram(block_shader_program_);
-  glUniformMatrix4fv(glGetUniformLocation(block_shader_program_, "uViewProjection"), 1, GL_FALSE,
-                     static_cast<const GLfloat *>(&view_projection_matrix[0][0]));
-  glUseProgram(0);
   DrawBlock(world_, 0.0f, 0.0f, 0.0f, kWorldSize);
 
-  // Draw transparent geometry and UI last.
+  // Note: Draw transparent geometry and UI last.
 
   glUseProgram(highlight_mesh_->material()->shader_program());
   glUniform3f(
@@ -585,7 +585,10 @@ void Game::DrawBlock(Block *block, float x, float y, float z, float size) {
 }
 
 void Game::MouseDown(int button) {
-  FocusWindow();
+  if (!window_focused_) {
+    FocusWindow();
+    return;
+  }
 
   if (button == MOUSE_BUTTON_LEFT) {
     BreakBlock();
