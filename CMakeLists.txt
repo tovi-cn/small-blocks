@@ -41,6 +41,8 @@ add_executable(small-blocks
   src/geometry.cc
   src/input_system.cc
   src/main.cc
+  src/material.cc
+  src/mesh.cc
   src/renderer.cc
   src/utilities.cc
   src/window.cc

@@ -20,14 +20,12 @@
 #include <vector>
 
 #include "glad/glad.h"
-#define GLFW_INCLUDE_NONE
-#include "GLFW/glfw3.h"
-#include "glm/gtx/transform.hpp"
-#include "glm/vec3.hpp"
+#include "glm/glm.hpp"
 
 #include "block.h"
 #include "geometry.h"
 #include "input_system.h"
+#include "material.h"
 #include "renderer.h"
 #include "window.h"
 
@@ -79,9 +77,6 @@ class Game : public InputListener {
   void DrawHighlight();
   void DrawCrosshair();
 
-  glm::vec3 GetCameraForward() const;
-  glm::mat4 GetCameraViewMatrix() const;
-
   Window *window_;
   Renderer *renderer_;
   InputSystem *input_;
@@ -90,8 +85,6 @@ class Game : public InputListener {
   glm::vec2 mouse_last_position_;
 
   float wireframe_;
-  glm::vec3 camera_position_;
-  glm::vec3 camera_rotation_;
 
   glm::vec3 player_position_;
   glm::vec3 player_rotation_;
@@ -107,27 +100,25 @@ class Game : public InputListener {
 
   Block *world_;
 
-  Geometry block_geometry_;
-  GLuint block_vertex_array_;
-  GLuint block_vertex_buffer_[3];
-  GLuint block_element_buffer_;
-
-  Geometry highlight_geometry_;
-  GLuint highlight_vertex_array_;
-  GLuint highlight_vertex_buffer_[2];
-  GLuint highlight_element_buffer_;
-
-  Geometry crosshair_geometry_;
-  GLuint crosshair_vertex_array_;
-  GLuint crosshair_vertex_buffer_[2];
-  GLuint crosshair_element_buffer_;
-
-  GLuint texture_;
+  GLuint block_texture_;
   GLuint highlight_texture_;
   GLuint crosshair_texture_;
 
-  GLuint shader_program_;
+  GLuint block_shader_program_;
+  GLuint highlight_shader_program_;
   GLuint crosshair_shader_program_;
+
+  Geometry block_geometry_;
+  Material block_material_;
+  Mesh *block_mesh_;
+
+  Geometry highlight_geometry_;
+  Material highlight_material_;
+  Mesh *highlight_mesh_;
+
+  Geometry crosshair_geometry_;
+  Material crosshair_material_;
+  Mesh *crosshair_mesh_;
 };
 
 #endif  // GAME_H_

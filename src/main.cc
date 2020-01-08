@@ -15,7 +15,7 @@
 
 #include <iostream>
 
-#include "glm/vec2.hpp"
+#include "glm/glm.hpp"
 
 #include "game.h"
 #include "input_system.h"

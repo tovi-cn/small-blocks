@@ -20,7 +20,7 @@
 
 #define GLFW_INCLUDE_NONE
 #include "GLFW/glfw3.h"
-#include "glm/vec2.hpp"
+#include "glm/glm.hpp"
 
 class Window {
  public:
@@ -29,7 +29,7 @@ class Window {
 
   bool Initialize(const std::string &title, glm::ivec2 size);
 
-  glm::ivec2 size() const {
+  glm::ivec2 GetSize() const {
     int width;
     int height;
     glfwGetFramebufferSize(window_, &width, &height);

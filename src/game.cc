@@ -19,13 +19,9 @@
 #include <vector>
 #include <ctime>
 
-#include "glm/gtx/euler_angles.hpp"
 #include "glm/gtx/transform.hpp"
-#include "glm/vec3.hpp"
-#include "glm/mat4x4.hpp"
 #include "stb_image.h"
 
-#include "fractals.h"
 #include "utilities.h"
 
 static const float kWorldSize = 10;
@@ -48,7 +44,7 @@ static const int kDefaultColor = kColor1;
 
 static const double kBlockInterval = 0.25;
 
-static const char *kVertexShaderText =
+static const char *kBlockVertexShaderText =
 "#version 330 core\n"
 "uniform mat4 uViewProjection;\n"
 "uniform mat4 uModel;\n"
@@ -76,7 +72,32 @@ static const char *kVertexShaderText =
 "  texCoord = vTexCoord;\n"
 "}\n";
 
-static const char *kFragmentShaderText =
+static const char *kBlockFragmentShaderText =
+"#version 330 core\n"
+"uniform sampler2D uTexture;\n"
+"in vec3 color;\n"
+"in vec2 texCoord;\n"
+"out vec4 FragColor;\n"
+"void main() {\n"
+"  FragColor = texture(uTexture, texCoord) * vec4(color, 1.0);\n"
+"}\n";
+
+static const char *kHighlightVertexShaderText =
+"#version 330 core\n"
+"uniform mat4 uViewProjection;\n"
+"uniform mat4 uModel;\n"
+"uniform vec3 uColor;\n"
+"layout (location = 0) in vec3 vPos;\n"
+"layout (location = 2) in vec2 vTexCoord;\n"
+"out vec3 color;\n"
+"out vec2 texCoord;\n"
+"void main() {\n"
+"  gl_Position = uViewProjection * uModel * vec4(vPos, 1.0);\n"
+"  color = uColor;\n"
+"  texCoord = vTexCoord;\n"
+"}\n";
+
+static const char *kHighlightFragmentShaderText =
 "#version 330 core\n"
 "uniform sampler2D uTexture;\n"
 "in vec3 color;\n"
@@ -106,82 +127,11 @@ static const char *kCrosshairFragmentShaderText =
 "  FragColor = texture(uTexture, texCoord);\n"
 "}\n";
 
-static const std::vector<Geometry::Position> kCubeVertexPositions = {
-  // Front
-  {0, 1, 1}, {1, 1, 1}, {0, 0, 1}, {1, 0, 1},
-  // Back
-  {1, 1, 0}, {0, 1, 0}, {1, 0, 0}, {0, 0, 0},
-  // Left
-  {0, 1, 0}, {0, 1, 1}, {0, 0, 0}, {0, 0, 1},
-  // Right
-  {1, 1, 1}, {1, 1, 0}, {1, 0, 1}, {1, 0, 0},
-  // Top
-  {0, 1, 0}, {1, 1, 0}, {0, 1, 1}, {1, 1, 1},
-  // Bottom
-  {0, 0, 1}, {1, 0, 1}, {0, 0, 0}, {1, 0, 0},
-};
-
-static const std::vector<Geometry::Normal> kCubeVertexNormals = {
-  // Front
-  {0, 0, 1}, {0, 0, 1}, {0, 0, 1}, {0, 0, 1},
-  // Back
-  {0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1},
-  // Left
-  {-1, 0, 0}, {-1, 0, 0}, {-1, 0, 0}, {-1, 0, 0},
-  // Right
-  {1, 0, 0}, {1, 0, 0}, {1, 0, 0}, {1, 0, 0},
-  // Top
-  {0, 1, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0},
-  // Bottom
-  {0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0},
-};
-
-static const std::vector<Geometry::Uv> kCubeVertexUvs = {
-  // Front
-  {0, 1}, {1, 1}, {0, 0}, {1, 0},
-  // Back
-  {0, 1}, {1, 1}, {0, 0}, {1, 0},
-  // Left
-  {0, 1}, {1, 1}, {0, 0}, {1, 0},
-  // Right
-  {0, 1}, {1, 1}, {0, 0}, {1, 0},
-  // Top
-  {0, 1}, {1, 1}, {0, 0}, {1, 0},
-  // Bottom
-  {0, 1}, {1, 1}, {0, 0}, {1, 0},
-};
-
-static const std::vector<unsigned int> kCubeIndices = {
-  // Front
-  2, 1, 0, 2, 3, 1,
-  // Back
-  6, 5, 4, 6, 7, 5,
-  // Left
-  10, 9, 8, 10, 11, 9,
-  // Right
-  14, 13, 12, 14, 15, 13,
-  // Top
-  18, 17, 16, 18, 19, 17,
-  // Bottom
-  22, 21, 20, 22, 23, 21,
-};
-
-static const std::vector<Geometry::Position> kSquareVertexPositions = {
-  {0, 1}, {1, 1}, {0, 0}, {1, 0},
-};
-static const std::vector<Geometry::Uv> kSquareVertexUvs = {
-  {0, 1}, {1, 1}, {0, 0}, {1, 0},
-};
-static const std::vector<unsigned int> kSquareIndices = {
-  2, 1, 0, 2, 3, 1,
-};
-
 Game::Game(Window *window, Renderer *renderer, InputSystem *input)
     : window_(window), renderer_(renderer), input_(input),
       window_focused_(false),
       mouse_last_position_(0.0),
       wireframe_(false),
-      camera_position_(0.0f), camera_rotation_(0.0f),
       player_position_(0.0f), player_rotation_(0.0f),
       size_dimension_(kDefaultSizeDimension),
       block_dimension_(kDefaultBlockDimension),
@@ -193,28 +143,27 @@ Game::Game(Window *window, Renderer *renderer, InputSystem *input)
       ray_cast_hit_(),
       world_(),
       block_geometry_(),
+      block_material_(),
+      block_mesh_(nullptr),
       highlight_geometry_(),
-      crosshair_geometry_() {}
+      highlight_material_(),
+      highlight_mesh_(nullptr),
+      crosshair_geometry_(),
+      crosshair_material_(),
+      crosshair_mesh_(nullptr)
+      {}
 
 Game::~Game() {
-  // Deallocate OpenGL objects
-  glDeleteVertexArrays(1, &block_vertex_array_);
-  glDeleteBuffers(3, block_vertex_buffer_);
-  glDeleteBuffers(1, &block_element_buffer_);
+  delete block_mesh_;
+  delete highlight_mesh_;
+  delete crosshair_mesh_;
 
-  glDeleteVertexArrays(1, &highlight_vertex_array_);
-  glDeleteBuffers(2, highlight_vertex_buffer_);
-  glDeleteBuffers(1, &highlight_element_buffer_);
-
-  glDeleteVertexArrays(1, &crosshair_vertex_array_);
-  glDeleteBuffers(2, crosshair_vertex_buffer_);
-  glDeleteBuffers(1, &crosshair_element_buffer_);
-
-  glDeleteTextures(1, &texture_);
+  glDeleteTextures(1, &block_texture_);
   glDeleteTextures(1, &highlight_texture_);
   glDeleteTextures(1, &crosshair_texture_);
 
-  glDeleteProgram(shader_program_);
+  glDeleteProgram(block_shader_program_);
+  glDeleteProgram(highlight_shader_program_);
   glDeleteProgram(crosshair_shader_program_);
 
   delete world_;
@@ -226,155 +175,63 @@ bool Game::Initialize() {
   window_->Maximize();
   FocusWindow();
 
-  // Generate block geometry
+  // Assets
+
+  LoadAssets();
+
+  // Block
 
   block_geometry_.positions() = kCubeVertexPositions;
   block_geometry_.normals() = kCubeVertexNormals;
   block_geometry_.uvs() = kCubeVertexUvs;
   block_geometry_.indices() = kCubeIndices;
 
-  glGenVertexArrays(1, &block_vertex_array_);
-  glBindVertexArray(block_vertex_array_);
+  block_material_.set_shader_program(block_shader_program_);
+  block_material_.set_texture(block_texture_);
 
-  glGenBuffers(3, block_vertex_buffer_);
-  glBindBuffer(GL_ARRAY_BUFFER, block_vertex_buffer_[0]);
-  glBufferData(GL_ARRAY_BUFFER,
-               block_geometry_.positions().size()
-                   * sizeof(block_geometry_.positions()[0]),
-               &block_geometry_.positions()[0], GL_STATIC_DRAW);
-  glBindBuffer(GL_ARRAY_BUFFER, block_vertex_buffer_[1]);
-  glBufferData(GL_ARRAY_BUFFER,
-               block_geometry_.normals().size()
-                   * sizeof(block_geometry_.normals()[0]),
-               &block_geometry_.normals()[0], GL_STATIC_DRAW);
-  glBindBuffer(GL_ARRAY_BUFFER, block_vertex_buffer_[2]);
-  glBufferData(GL_ARRAY_BUFFER,
-               block_geometry_.uvs().size() * sizeof(block_geometry_.uvs()[0]),
-               &block_geometry_.uvs()[0], GL_STATIC_DRAW);
+  block_mesh_ = new Mesh(&block_geometry_, &block_material_);
 
-  glBindBuffer(GL_ARRAY_BUFFER, block_vertex_buffer_[0]);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
-                        sizeof(block_geometry_.positions()[0]),
-                        reinterpret_cast<void *>(0));
-  glBindBuffer(GL_ARRAY_BUFFER, block_vertex_buffer_[1]);
-  glEnableVertexAttribArray(1);
-  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
-                        sizeof(block_geometry_.normals()[0]),
-                        reinterpret_cast<void *>(0));
-  glBindBuffer(GL_ARRAY_BUFFER, block_vertex_buffer_[2]);
-  glEnableVertexAttribArray(2);
-  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE,
-                        sizeof(block_geometry_.uvs()[0]),
-                        reinterpret_cast<void *>(0));
-
-  glGenBuffers(1, &block_element_buffer_);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, block_element_buffer_);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-               block_geometry_.indices().size()
-                   * sizeof(block_geometry_.indices()[0]),
-               &block_geometry_.indices()[0], GL_STATIC_DRAW);
-
-  glBindVertexArray(0);
-
-  // Generate highlight geometry
+  // Highlight
 
   highlight_geometry_.positions() = kCubeVertexPositions;
-  highlight_geometry_.normals() = kCubeVertexNormals;
   highlight_geometry_.uvs() = kCubeVertexUvs;
   highlight_geometry_.indices() = kCubeIndices;
 
-  glGenVertexArrays(1, &highlight_vertex_array_);
-  glBindVertexArray(highlight_vertex_array_);
+  highlight_material_.set_shader_program(highlight_shader_program_);
+  highlight_material_.set_texture(highlight_texture_);
 
-  glGenBuffers(3, highlight_vertex_buffer_);
-  glBindBuffer(GL_ARRAY_BUFFER, highlight_vertex_buffer_[0]);
-  glBufferData(GL_ARRAY_BUFFER,
-               highlight_geometry_.positions().size()
-                   * sizeof(highlight_geometry_.positions()[0]),
-               &highlight_geometry_.positions()[0], GL_STATIC_DRAW);
-  glBindBuffer(GL_ARRAY_BUFFER, highlight_vertex_buffer_[1]);
-  glBufferData(GL_ARRAY_BUFFER,
-               highlight_geometry_.normals().size()
-                   * sizeof(highlight_geometry_.normals()[0]),
-               &highlight_geometry_.normals()[0], GL_STATIC_DRAW);
-  glBindBuffer(GL_ARRAY_BUFFER, highlight_vertex_buffer_[2]);
-  glBufferData(GL_ARRAY_BUFFER,
-               highlight_geometry_.uvs().size()
-                   * sizeof(highlight_geometry_.uvs()[0]),
-               &highlight_geometry_.uvs()[0], GL_STATIC_DRAW);
+  highlight_mesh_ = new Mesh(&highlight_geometry_, &highlight_material_);
 
-  glBindBuffer(GL_ARRAY_BUFFER, highlight_vertex_buffer_[0]);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
-                        sizeof(highlight_geometry_.positions()[0]),
-                        reinterpret_cast<void *>(0));
-  glBindBuffer(GL_ARRAY_BUFFER, highlight_vertex_buffer_[1]);
-  glEnableVertexAttribArray(1);
-  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
-                        sizeof(highlight_geometry_.normals()[0]),
-                        reinterpret_cast<void *>(0));
-  glBindBuffer(GL_ARRAY_BUFFER, highlight_vertex_buffer_[2]);
-  glEnableVertexAttribArray(2);
-  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE,
-                        sizeof(highlight_geometry_.uvs()[0]),
-                        reinterpret_cast<void *>(0));
-
-  glGenBuffers(1, &highlight_element_buffer_);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, highlight_element_buffer_);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-               highlight_geometry_.indices().size()
-                   * sizeof(highlight_geometry_.indices()[0]),
-               &highlight_geometry_.indices()[0], GL_STATIC_DRAW);
-
-  glBindVertexArray(0);
-
-  // Crosshair geometry
+  // Crosshair
 
   crosshair_geometry_.positions() = kSquareVertexPositions;
   crosshair_geometry_.uvs() = kSquareVertexUvs;
   crosshair_geometry_.indices() = kSquareIndices;
 
-  glGenVertexArrays(1, &crosshair_vertex_array_);
-  glBindVertexArray(crosshair_vertex_array_);
+  crosshair_material_.set_shader_program(crosshair_shader_program_);
+  crosshair_material_.set_texture(crosshair_texture_);
 
-  glGenBuffers(2, crosshair_vertex_buffer_);
+  crosshair_mesh_ = new Mesh(&crosshair_geometry_, &crosshair_material_);
 
-  glBindBuffer(GL_ARRAY_BUFFER, crosshair_vertex_buffer_[0]);
-  glBufferData(GL_ARRAY_BUFFER,
-               crosshair_geometry_.positions().size()
-                   * sizeof(crosshair_geometry_.positions()[0]),
-               &crosshair_geometry_.positions()[0], GL_STATIC_DRAW);
+  glm::ivec2 window_size = window_->GetSize();
 
-  glBindBuffer(GL_ARRAY_BUFFER, crosshair_vertex_buffer_[1]);
-  glBufferData(GL_ARRAY_BUFFER,
-               crosshair_geometry_.uvs().size()
-                   * sizeof(crosshair_geometry_.uvs()[0]),
-               &crosshair_geometry_.uvs()[0], GL_STATIC_DRAW);
+  glm::mat4 crosshair_model_matrix(1.0f);
 
-  glBindBuffer(GL_ARRAY_BUFFER, crosshair_vertex_buffer_[0]);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
-                        sizeof(crosshair_geometry_.positions()[0]),
-                        reinterpret_cast<void *>(0));
-  glBindBuffer(GL_ARRAY_BUFFER, crosshair_vertex_buffer_[1]);
-  glEnableVertexAttribArray(1);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
-                        sizeof(crosshair_geometry_.uvs()[0]),
-                        reinterpret_cast<void *>(0));
+  float crosshair_size = 0.025f * window_size.y;
+  crosshair_model_matrix =
+      glm::scale(glm::vec3(crosshair_size)) * crosshair_model_matrix;
 
-  glGenBuffers(1, &crosshair_element_buffer_);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, crosshair_element_buffer_);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-               crosshair_geometry_.indices().size()
-                   * sizeof(crosshair_geometry_.indices()[0]),
-               &crosshair_geometry_.indices()[0], GL_STATIC_DRAW);
+  glm::vec2 crosshair_center(window_size.x / 2.0f - crosshair_size / 2.0f,
+                             window_size.y / 2.0f - crosshair_size / 2.0f);
+  crosshair_model_matrix =
+      glm::translate(glm::vec3(crosshair_center, 0.0f))
+      * crosshair_model_matrix;
 
-  glBindVertexArray(0);
-
-  // Assets
-
-  LoadAssets();
+  crosshair_model_matrix =
+      glm::ortho(0.0f, static_cast<float>(window_size.x),
+                 0.0f, static_cast<float>(window_size.y), 0.0f, 0.01f)
+      * crosshair_model_matrix;
+  crosshair_mesh_->set_model_matrix(crosshair_model_matrix);
 
   // Create world
 
@@ -391,8 +248,8 @@ bool Game::Initialize() {
 void Game::LoadAssets() {
   // Load block texture
 
-  glGenTextures(1, &texture_);
-  glBindTexture(GL_TEXTURE_2D, texture_);
+  glGenTextures(1, &block_texture_);
+  glBindTexture(GL_TEXTURE_2D, block_texture_);
 
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -468,8 +325,10 @@ void Game::LoadAssets() {
 
   // Load shaders
 
-  shader_program_ = renderer_->CreateShaderProgram(
-      kVertexShaderText, kFragmentShaderText);
+  block_shader_program_ = renderer_->CreateShaderProgram(
+      kBlockVertexShaderText, kBlockFragmentShaderText);
+  highlight_shader_program_ = renderer_->CreateShaderProgram(
+      kHighlightVertexShaderText, kHighlightFragmentShaderText);
   crosshair_shader_program_ = renderer_->CreateShaderProgram(
       kCrosshairVertexShaderText, kCrosshairFragmentShaderText);
 }
@@ -504,7 +363,7 @@ void Game::Update(float delta_time) {
     player_rotation_.x = glm::clamp(player_rotation_.x, glm::radians(-89.99f),
                                     glm::radians(89.99f));
 
-    glm::vec3 forward = GetCameraForward();
+    glm::vec3 forward = renderer_->GetCameraForward();
     forward.y = 0.0f;
     forward = glm::normalize(forward);
     glm::vec3 up(0.0f, 1.0f, 0.0f);
@@ -542,11 +401,14 @@ void Game::Update(float delta_time) {
   player_position_.z =
       glm::clamp(player_position_.z, -kWorldSize, 2 * kWorldSize);
 
-  camera_position_ = player_position_;
+  glm::vec3 camera_position = player_position_;
   // TODO: float player_height = glm::pow(2.0f, -size_dimension_);
   float player_height = 1.0f;
-  camera_position_.y += player_height;
-  camera_rotation_ = player_rotation_;
+  camera_position.y += player_height;
+  renderer_->set_camera_position(camera_position);
+  renderer_->set_camera_rotation(player_rotation_);
+
+  ray_cast_hit_ = RayCastBlock();
 
   double time = input_->GetTime();
   if (placing_ && time - last_block_time_ >= block_interval_) {
@@ -558,7 +420,26 @@ void Game::Update(float delta_time) {
     last_block_time_ = time;
   }
 
-  ray_cast_hit_ = RayCastBlock();
+  if (ray_cast_hit_.block) {
+    highlight_mesh_->set_hidden(false);
+
+    glm::mat4 highlight_model_matrix(1.0f);
+    float highlight_size =
+        kWorldSize * glm::pow(2.0f, static_cast<float>(-block_dimension_));
+    float highlight_extra = highlight_size * 0.015f;
+    highlight_model_matrix =
+        glm::scale(glm::vec3(highlight_size + highlight_extra))
+        * highlight_model_matrix;
+    glm::vec3 highlight_position = ray_cast_hit_.position;
+    highlight_position.x -= highlight_extra / 2.0f;
+    highlight_position.y -= highlight_extra / 2.0f;
+    highlight_position.z -= highlight_extra / 2.0f;
+    highlight_model_matrix =
+        glm::translate(highlight_position) * highlight_model_matrix;
+    highlight_mesh_->set_model_matrix(highlight_model_matrix);
+  } else {
+    highlight_mesh_->set_hidden(true);
+  }
 }
 
 void Game::GenerateWorld() {
@@ -597,9 +478,9 @@ Game::RayCastHit Game::RayCastBlock() {
   RayCastHit hit;
   hit.block = nullptr;
   hit.dimension = 0;
-  hit.position = camera_position_;
+  hit.position = renderer_->camera_position();
   hit.previous_position = hit.position;
-  glm::vec3 direction = GetCameraForward();
+  glm::vec3 direction = renderer_->GetCameraForward();
 
   int num_steps = 10000;
   for (int i = 0; i < num_steps; ++i) {
@@ -794,38 +675,30 @@ void Game::UnfocusWindow() {
 }
 
 void Game::Render() {
-  glm::ivec2 window_size = window_->size();
-  glViewport(0, 0, window_size.x, window_size.y);
+  glm::ivec2 window_size = window_->GetSize();
+  renderer_->set_aspect(static_cast<float>(window_size.x) / window_size.y);
 
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  renderer_->Render();
 
-  float fov = 90.0f;
-  float aspect = static_cast<float>(window_size.x) / window_size.y;
-  float near = 0.01f;
-  float far = 500.0f;
-  glm::mat4 projection_matrix =
-      glm::perspective(glm::radians(fov), aspect, near, far);
+  glm::mat4 view_projection_matrix = renderer_->GetViewProjectionMatrix();
 
-  glm::mat4 view_matrix = GetCameraViewMatrix();
-
-  glm::mat4 view_projection_matrix = projection_matrix * view_matrix;
-
-  glUseProgram(shader_program_);
-  glUniformMatrix4fv(glGetUniformLocation(shader_program_, "uViewProjection"), 1, GL_FALSE,
+  glUseProgram(block_shader_program_);
+  glUniformMatrix4fv(glGetUniformLocation(block_shader_program_, "uViewProjection"), 1, GL_FALSE,
                      static_cast<const GLfloat *>(&view_projection_matrix[0][0]));
   glUseProgram(0);
-
-  if (wireframe_) {
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-  }
   DrawBlock(world_, 0.0f, 0.0f, 0.0f, kWorldSize);
-  if (wireframe_) {
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-  }
 
-  DrawHighlight();
+  // Draw transparent geometry and UI last.
 
-  DrawCrosshair();
+  glUseProgram(highlight_mesh_->material()->shader_program());
+  glUniform3f(
+      glGetUniformLocation(highlight_mesh_->material()->shader_program(),
+                           "uColor"),
+      0.07f, 0.07f, 0.07f);
+  glUseProgram(0);
+  renderer_->RenderMesh(highlight_mesh_);
+
+  renderer_->RenderMesh(crosshair_mesh_);
 
   renderer_->SwapBuffers();
 }
@@ -839,33 +712,18 @@ void Game::DrawBlock(Block *block, float x, float y, float z, float size) {
     glm::mat4 model_matrix(1.0f);
     model_matrix = glm::scale(glm::vec3(size)) * model_matrix;
     model_matrix = glm::translate(glm::vec3(x, y, z)) * model_matrix;
+    block_mesh_->set_model_matrix(model_matrix);
 
-    glUseProgram(shader_program_);
-    glUniformMatrix4fv(glGetUniformLocation(shader_program_, "uModel"), 1, GL_FALSE,
-                       static_cast<const GLfloat *>(&model_matrix[0][0]));
-    glUseProgram(0);
-
-    glUseProgram(shader_program_);
+    glUseProgram(block_shader_program_);
     float r = static_cast<float>((block->value() >> 16) & 0xff) / 0xff;
     float g = static_cast<float>((block->value() >> 8) & 0xff) / 0xff;
     float b = static_cast<float>(block->value() & 0xff) / 0xff;
-    glUniform3f(glGetUniformLocation(shader_program_, "uColor"), r, g, b);
+    glUniform3f(glGetUniformLocation(block_shader_program_, "uColor"), r, g, b);
     glUseProgram(0);
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture_);
-    glUseProgram(shader_program_);
-    glUniform1i(glGetUniformLocation(shader_program_, "uTexture"), 0);
-    glUseProgram(0);
+    block_mesh_->set_wireframe(wireframe_);
 
-    glUseProgram(shader_program_);
-    glBindVertexArray(block_vertex_array_);
-    glDrawElements(GL_TRIANGLES,
-                   static_cast<GLsizei>(block_geometry_.indices().size()),
-                   GL_UNSIGNED_INT,
-                   reinterpret_cast<void *>(0));
-    glBindVertexArray(0);
-    glUseProgram(0);
+    renderer_->RenderMesh(block_mesh_);
   }
 
   if (!block->is_leaf()) {
@@ -880,102 +738,6 @@ void Game::DrawBlock(Block *block, float x, float y, float z, float size) {
     DrawBlock(block->child(6), x       , y          , z       , size);
     DrawBlock(block->child(7), x + size, y          , z       , size);
   }
-}
-
-void Game::DrawHighlight() {
-  if (!ray_cast_hit_.block) {
-    return;
-  }
-
-  glm::mat4 model_matrix(1.0f);
-  float size = kWorldSize
-      * glm::pow(2.0f, static_cast<float>(-block_dimension_));
-  float extra = size * 0.015f;
-  model_matrix = glm::scale(glm::vec3(size + extra)) * model_matrix;
-  glm::vec3 position = ray_cast_hit_.position;
-  position.x -= extra / 2.0f;
-  position.y -= extra / 2.0f;
-  position.z -= extra / 2.0f;
-  model_matrix = glm::translate(position) * model_matrix;
-
-  glUseProgram(shader_program_);
-  glUniformMatrix4fv(glGetUniformLocation(shader_program_, "uModel"), 1, GL_FALSE,
-                     static_cast<const GLfloat *>(&model_matrix[0][0]));
-  glUseProgram(0);
-
-  glUseProgram(shader_program_);
-  glUniform3f(glGetUniformLocation(shader_program_, "uColor"), 0.07f, 0.07f, 0.07f);  // Dark gray
-  glUseProgram(0);
-
-  glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, highlight_texture_);
-  glUseProgram(shader_program_);
-  glUniform1i(glGetUniformLocation(shader_program_, "uTexture"), 0);
-  glUseProgram(0);
-
-  glUseProgram(shader_program_);
-  glBindVertexArray(highlight_vertex_array_);
-  glDrawElements(GL_TRIANGLES,
-                 static_cast<GLsizei>(highlight_geometry_.indices().size()),
-                 GL_UNSIGNED_INT,
-                 reinterpret_cast<void *>(0));
-  glBindVertexArray(0);
-  glUseProgram(0);
-}
-
-void Game::DrawCrosshair() {
-  glm::ivec2 window_size = window_->size();
-
-  glm::mat4 model_matrix(1.0f);
-
-  float size = 0.025f * window_size.y;
-  model_matrix = glm::scale(glm::vec3(size)) * model_matrix;
-
-  glm::vec2 center(window_size.x / 2.0f - size / 2.0f,
-                   window_size.y / 2.0f - size / 2.0f);
-  model_matrix = glm::translate(glm::vec3(center, 0.0f)) * model_matrix;
-
-  model_matrix =
-      glm::ortho(0.0f, static_cast<float>(window_size.x),
-                 0.0f, static_cast<float>(window_size.y), 0.0f, 0.01f)
-      * model_matrix;
-
-  glUseProgram(crosshair_shader_program_);
-  glUniformMatrix4fv(glGetUniformLocation(crosshair_shader_program_, "uModel"), 1, GL_FALSE,
-                     static_cast<const GLfloat *>(&model_matrix[0][0]));
-  glUseProgram(0);
-
-  glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, crosshair_texture_);
-  glUseProgram(crosshair_shader_program_);
-  glUniform1i(glGetUniformLocation(crosshair_shader_program_, "uTexture"), 0);
-  glUseProgram(0);
-
-  glUseProgram(crosshair_shader_program_);
-  glBindVertexArray(crosshair_vertex_array_);
-  glDrawElements(GL_TRIANGLES,
-                 static_cast<GLsizei>(crosshair_geometry_.indices().size()),
-                 GL_UNSIGNED_INT,
-                 reinterpret_cast<void *>(0));
-  glBindVertexArray(0);
-  glUseProgram(0);
-}
-
-glm::vec3 Game::GetCameraForward() const {
-  glm::mat4 rotation(1.0f);
-  rotation = glm::rotate(camera_rotation_.x, glm::vec3(1.0f, 0.0f, 0.0f)) * rotation;
-  rotation = glm::rotate(camera_rotation_.y, glm::vec3(0.0f, 1.0f, 0.0f)) * rotation;
-  glm::vec3 forward = glm::vec3(rotation * glm::vec4(0.0f, 0.0f, -1.0f, 1.0f));
-  return forward;
-}
-
-glm::mat4 Game::GetCameraViewMatrix() const {
-  glm::mat4 matrix(1.0f);
-  matrix = glm::translate(-camera_position_) * matrix;
-  matrix = glm::rotate(-camera_rotation_.y, glm::vec3(0.0f, 1.0f, 0.0f)) * matrix;
-  matrix = glm::rotate(-camera_rotation_.x, glm::vec3(1.0f, 0.0f, 0.0f)) * matrix;
-  matrix = glm::scale(glm::vec3(1.0f / speed_)) * matrix;
-  return matrix;
 }
 
 void Game::MouseDown(int button) {

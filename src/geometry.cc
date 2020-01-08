@@ -15,7 +15,8 @@
 
 #include "geometry.h"
 
-Geometry::Geometry() : positions_(), normals_(), uvs_(), colors_(), indices_() {
+Geometry::Geometry()
+    : positions_(), normals_(), uvs_(), colors_(), indices_() {
 }
 
 Geometry::~Geometry() {
