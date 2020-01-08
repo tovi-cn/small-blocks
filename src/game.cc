@@ -381,7 +381,7 @@ Block *Game::GetBlock(float x, float y, float z, int *dimension) {
 
   for (int i = 0; ; ++i) {
     if (block->is_leaf()) {
-      return block;
+      break;
     }
 
     ++(*dimension);
@@ -427,6 +427,8 @@ Block *Game::GetBlock(float x, float y, float z, int *dimension) {
     }
     block = child;
   }
+
+  return block;
 }
 
 void Game::SetBlock(float x, float y, float z, int dimension, int value) {

@@ -4,7 +4,7 @@ uniform mat4 uViewProjection;
 uniform mat4 uModel;
 uniform vec3 uColor;
 layout (location = 0) in vec3 vPos;
-layout (location = 2) in vec2 vTexCoord;
+layout (location = 1) in vec2 vTexCoord;
 out vec3 color;
 out vec2 texCoord;
 
