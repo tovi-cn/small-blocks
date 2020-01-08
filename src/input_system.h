@@ -44,21 +44,21 @@ class InputSystem {
   void AddListener(InputListener *listener);
   void RemoveListener(InputListener *listener);
 
-  glm::vec2 mouse_position() const {
+  glm::vec2 GetMousePosition() const {
     double x;
     double y;
     glfwGetCursorPos(window_->window_glfw(), &x, &y);
     return glm::vec2(x, y);
   }
 
-  bool is_mouse_button_pressed(int button) const {
+  bool MouseButtonIsPressed(int button) const {
     return pressed_mouse_buttons_.test(button);
   }
-  bool is_key_pressed(int key) const {
+  bool KeyIsPressed(int key) const {
     return pressed_keys_.test(key);
   }
 
-  bool is_exit_requested() const {
+  bool ExitIsRequested() const {
     return glfwWindowShouldClose(window_->window_glfw());
   }
 

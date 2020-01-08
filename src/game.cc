@@ -475,10 +475,10 @@ void Game::LoadAssets() {
 }
 
 void Game::Run() {
-  mouse_last_position_ = input_->mouse_position();
+  mouse_last_position_ = input_->GetMousePosition();
   double last_time = input_->GetTime();
 
-  while (!input_->is_exit_requested()) {
+  while (!input_->ExitIsRequested()) {
     double current_time = input_->GetTime();
     float delta_time = static_cast<float>(current_time - last_time);
     last_time = current_time;
@@ -491,7 +491,7 @@ void Game::Run() {
 }
 
 void Game::Update(float delta_time) {
-  glm::vec2 mouse_position = input_->mouse_position();
+  glm::vec2 mouse_position = input_->GetMousePosition();
   glm::vec2 mouse_delta = mouse_position - mouse_last_position_;
   mouse_last_position_ = mouse_position;
 
@@ -511,26 +511,26 @@ void Game::Update(float delta_time) {
     glm::vec3 right = glm::normalize(glm::cross(forward, up));
 
     glm::vec3 direction(0.0f);
-    if (input_->is_key_pressed(KEY_W)) {
+    if (input_->KeyIsPressed(KEY_W)) {
       direction += forward;
     }
-    if (input_->is_key_pressed(KEY_S)) {
+    if (input_->KeyIsPressed(KEY_S)) {
       direction -= forward;
     }
-    if (input_->is_key_pressed(KEY_A)) {
+    if (input_->KeyIsPressed(KEY_A)) {
       direction -= right;
     }
-    if (input_->is_key_pressed(KEY_D)) {
+    if (input_->KeyIsPressed(KEY_D)) {
       direction += right;
     }
     if (direction != glm::vec3(0.0f)) {
       player_position_ += glm::normalize(direction) * speed_ * delta_time;
     }
 
-    if (input_->is_key_pressed(KEY_SPACE)) {
+    if (input_->KeyIsPressed(KEY_SPACE)) {
       player_position_ += up * speed_ * delta_time;
     }
-    if (input_->is_key_pressed(KEY_LEFT_SHIFT)) {
+    if (input_->KeyIsPressed(KEY_LEFT_SHIFT)) {
       player_position_ -= up * speed_ * delta_time;
     }
   }

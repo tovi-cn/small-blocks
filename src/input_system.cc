@@ -63,7 +63,6 @@ double InputSystem::GetTime() const {
 
 void InputSystem::MouseDown(int button) {
   pressed_mouse_buttons_.set(button);
-
   for (auto listener : listeners_) {
     listener->MouseDown(button);
   }
@@ -71,7 +70,6 @@ void InputSystem::MouseDown(int button) {
 
 void InputSystem::MouseUp(int button) {
   pressed_mouse_buttons_.reset(button);
-
   for (auto listener : listeners_) {
     listener->MouseUp(button);
   }
