@@ -18,10 +18,19 @@
 #include <algorithm>
 #include <iostream>
 
+#include "stb_image.h"
+
+#include "utilities.h"
+
 static const float kDefaultFov = glm::radians(90.0f);
 static const float kDefaultAspect = 1.0f;
 static const float kDefaultNear = 0.01f;
 static const float kDefaultFar = 500.0f;
+
+static const std::string kVertexShaderFileExtension = ".vert";
+static const std::string kFragmentShaderFileExtension = ".frag";
+
+static const int kNumTextureImageComponents = 4;
 
 Renderer::Renderer(Window *window)
     : window_(window),
@@ -111,13 +120,31 @@ void Renderer::SwapBuffers() {
   glfwSwapBuffers(window_->window_glfw());
 }
 
+GLuint Renderer::LoadShaderProgram(const std::string &shader_path) {
+  std::string vertex_shader_path =
+      shader_path + kVertexShaderFileExtension;
+  GLuint vertex_shader =
+      LoadShader(vertex_shader_path, GL_VERTEX_SHADER);
+
+  std::string fragment_shader_path =
+      shader_path + kFragmentShaderFileExtension;
+  GLuint fragment_shader =
+      LoadShader(fragment_shader_path, GL_FRAGMENT_SHADER);
+
+  return CreateShaderProgram(vertex_shader, fragment_shader);
+}
+
 GLuint Renderer::CreateShaderProgram(const std::string &vertex_shader_text,
                                      const std::string &fragment_shader_text) {
   GLuint vertex_shader =
       CreateShader(vertex_shader_text, GL_VERTEX_SHADER);
   GLuint fragment_shader =
       CreateShader(fragment_shader_text, GL_FRAGMENT_SHADER);
+  return CreateShaderProgram(vertex_shader, fragment_shader);
+}
 
+GLuint Renderer::CreateShaderProgram(GLuint vertex_shader,
+                                     GLuint fragment_shader) {
   GLuint program = glCreateProgram();
   glAttachShader(program, vertex_shader);
   glAttachShader(program, fragment_shader);
@@ -142,6 +169,16 @@ GLuint Renderer::CreateShaderProgram(const std::string &vertex_shader_text,
   return program;
 }
 
+GLuint Renderer::LoadShader(const std::string &path, GLenum type) {
+  std::cout << "Loading shader " << path << "\n";
+  std::string text;
+  if (!LoadFile(path, &text)) {
+    std::cerr << "Failed to load " << path << "\n";
+    return 0;
+  }
+  return CreateShader(text, type);
+}
+
 GLuint Renderer::CreateShader(const std::string &text, GLenum type) {
   GLuint shader = glCreateShader(type);
   const GLchar *texts[] = {text.c_str()};
@@ -162,6 +199,41 @@ GLuint Renderer::CreateShader(const std::string &text, GLenum type) {
   }
 
   return shader;
+}
+
+GLuint Renderer::LoadTexture(const std::string &image_path) {
+  std::cout << "Loading texture " << image_path << "\n";
+
+  GLuint texture;
+  glGenTextures(1, &texture);
+  glBindTexture(GL_TEXTURE_2D, texture);
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+  int num_image_components = kNumTextureImageComponents;
+  int image_width;
+  int image_height;
+  stbi_set_flip_vertically_on_load(true);
+  unsigned char *image_data =
+      stbi_load(image_path.c_str(), &image_width, &image_height, nullptr,
+                num_image_components);
+  stbi_set_flip_vertically_on_load(false);
+
+  if (image_data) {
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width, image_height, 0,
+                 GL_RGBA, GL_UNSIGNED_BYTE, image_data);
+    stbi_image_free(image_data);
+  } else {
+    std::cerr << "Failed to load texture " << image_path << "\n";
+  }
+
+  glGenerateMipmap(GL_TEXTURE_2D);
+
+  glBindTexture(GL_TEXTURE_2D, 0);
+  return texture;
 }
 
 void GLAPIENTRY Renderer::OnGlError(GLenum source, GLenum type, GLuint id,

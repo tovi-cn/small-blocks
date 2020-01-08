@@ -20,7 +20,6 @@
 #include <ctime>
 
 #include "glm/gtx/transform.hpp"
-#include "stb_image.h"
 
 #include "utilities.h"
 
@@ -44,88 +43,88 @@ static const int kDefaultColor = kColor1;
 
 static const double kBlockInterval = 0.25;
 
-static const char *kBlockVertexShaderText =
-"#version 330 core\n"
-"uniform mat4 uViewProjection;\n"
-"uniform mat4 uModel;\n"
-"uniform vec3 uColor;\n"
-"layout (location = 0) in vec3 vPos;\n"
-"layout (location = 1) in vec3 vNormal;\n"
-"layout (location = 2) in vec2 vTexCoord;\n"
-"out vec3 color;\n"
-"out vec2 texCoord;\n"
-"void main() {\n"
-"  gl_Position = uViewProjection * uModel * vec4(vPos, 1.0);\n"
-"  color = uColor;\n"
-"  if (vNormal.x == 1 || vNormal.x == -1) {\n"
-"    color *= .65;\n"
-"  }\n"
-"  if (vNormal.y == 1) {\n"
-"    color *= 1;\n"
-"  }\n"
-"  if (vNormal.y == -1) {\n"
-"    color *= .25;\n"
-"  }\n"
-"  if (vNormal.z == 1 || vNormal.z == -1) {\n"
-"    color *= .5;\n"
-"  }\n"
-"  texCoord = vTexCoord;\n"
-"}\n";
-
-static const char *kBlockFragmentShaderText =
-"#version 330 core\n"
-"uniform sampler2D uTexture;\n"
-"in vec3 color;\n"
-"in vec2 texCoord;\n"
-"out vec4 FragColor;\n"
-"void main() {\n"
-"  FragColor = texture(uTexture, texCoord) * vec4(color, 1.0);\n"
-"}\n";
-
-static const char *kHighlightVertexShaderText =
-"#version 330 core\n"
-"uniform mat4 uViewProjection;\n"
-"uniform mat4 uModel;\n"
-"uniform vec3 uColor;\n"
-"layout (location = 0) in vec3 vPos;\n"
-"layout (location = 2) in vec2 vTexCoord;\n"
-"out vec3 color;\n"
-"out vec2 texCoord;\n"
-"void main() {\n"
-"  gl_Position = uViewProjection * uModel * vec4(vPos, 1.0);\n"
-"  color = uColor;\n"
-"  texCoord = vTexCoord;\n"
-"}\n";
-
-static const char *kHighlightFragmentShaderText =
-"#version 330 core\n"
-"uniform sampler2D uTexture;\n"
-"in vec3 color;\n"
-"in vec2 texCoord;\n"
-"out vec4 FragColor;\n"
-"void main() {\n"
-"  FragColor = texture(uTexture, texCoord) * vec4(color, 1.0);\n"
-"}\n";
-
-static const char *kCrosshairVertexShaderText =
-"#version 330 core\n"
-"uniform mat4 uModel;\n"
-"layout (location = 0) in vec3 vPos;\n"
-"layout (location = 1) in vec2 vTexCoord;\n"
-"out vec2 texCoord;\n"
-"void main() {\n"
-"  gl_Position = uModel * vec4(vPos, 1.0);\n"
-"  texCoord = vTexCoord;\n"
-"}\n";
-
-static const char *kCrosshairFragmentShaderText =
-"#version 330 core\n"
-"uniform sampler2D uTexture;\n"
-"in vec2 texCoord;\n"
-"out vec4 FragColor;\n"
-"void main() {\n"
-"  FragColor = texture(uTexture, texCoord);\n"
-"}\n";
+// static const char *kBlockVertexShaderText =
+// "#version 330 core\n"
+// "uniform mat4 uViewProjection;\n"
+// "uniform mat4 uModel;\n"
+// "uniform vec3 uColor;\n"
+// "layout (location = 0) in vec3 vPos;\n"
+// "layout (location = 1) in vec3 vNormal;\n"
+// "layout (location = 2) in vec2 vTexCoord;\n"
+// "out vec3 color;\n"
+// "out vec2 texCoord;\n"
+// "void main() {\n"
+// "  gl_Position = uViewProjection * uModel * vec4(vPos, 1.0);\n"
+// "  color = uColor;\n"
+// "  if (vNormal.x == 1 || vNormal.x == -1) {\n"
+// "    color *= .65;\n"
+// "  }\n"
+// "  if (vNormal.y == 1) {\n"
+// "    color *= 1;\n"
+// "  }\n"
+// "  if (vNormal.y == -1) {\n"
+// "    color *= .25;\n"
+// "  }\n"
+// "  if (vNormal.z == 1 || vNormal.z == -1) {\n"
+// "    color *= .5;\n"
+// "  }\n"
+// "  texCoord = vTexCoord;\n"
+// "}\n";
+// 
+// static const char *kBlockFragmentShaderText =
+// "#version 330 core\n"
+// "uniform sampler2D uTexture;\n"
+// "in vec3 color;\n"
+// "in vec2 texCoord;\n"
+// "out vec4 FragColor;\n"
+// "void main() {\n"
+// "  FragColor = texture(uTexture, texCoord) * vec4(color, 1.0);\n"
+// "}\n";
+// 
+// static const char *kHighlightVertexShaderText =
+// "#version 330 core\n"
+// "uniform mat4 uViewProjection;\n"
+// "uniform mat4 uModel;\n"
+// "uniform vec3 uColor;\n"
+// "layout (location = 0) in vec3 vPos;\n"
+// "layout (location = 2) in vec2 vTexCoord;\n"
+// "out vec3 color;\n"
+// "out vec2 texCoord;\n"
+// "void main() {\n"
+// "  gl_Position = uViewProjection * uModel * vec4(vPos, 1.0);\n"
+// "  color = uColor;\n"
+// "  texCoord = vTexCoord;\n"
+// "}\n";
+// 
+// static const char *kHighlightFragmentShaderText =
+// "#version 330 core\n"
+// "uniform sampler2D uTexture;\n"
+// "in vec3 color;\n"
+// "in vec2 texCoord;\n"
+// "out vec4 FragColor;\n"
+// "void main() {\n"
+// "  FragColor = texture(uTexture, texCoord) * vec4(color, 1.0);\n"
+// "}\n";
+// 
+// static const char *kCrosshairVertexShaderText =
+// "#version 330 core\n"
+// "uniform mat4 uModel;\n"
+// "layout (location = 0) in vec3 vPos;\n"
+// "layout (location = 1) in vec2 vTexCoord;\n"
+// "out vec2 texCoord;\n"
+// "void main() {\n"
+// "  gl_Position = uModel * vec4(vPos, 1.0);\n"
+// "  texCoord = vTexCoord;\n"
+// "}\n";
+// 
+// static const char *kCrosshairFragmentShaderText =
+// "#version 330 core\n"
+// "uniform sampler2D uTexture;\n"
+// "in vec2 texCoord;\n"
+// "out vec4 FragColor;\n"
+// "void main() {\n"
+// "  FragColor = texture(uTexture, texCoord);\n"
+// "}\n";
 
 Game::Game(Window *window, Renderer *renderer, InputSystem *input)
     : window_(window), renderer_(renderer), input_(input),
@@ -246,91 +245,19 @@ bool Game::Initialize() {
 }
 
 void Game::LoadAssets() {
-  // Load block texture
+  block_texture_ =
+      renderer_->LoadTexture("assets/textures/block.png");
+  highlight_texture_ =
+      renderer_->LoadTexture("assets/textures/highlight.png");
+  crosshair_texture_ =
+      renderer_->LoadTexture("assets/textures/crosshair.png");
 
-  glGenTextures(1, &block_texture_);
-  glBindTexture(GL_TEXTURE_2D, block_texture_);
-
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-  int image_width;
-  int image_height;
-
-  stbi_set_flip_vertically_on_load(true);
-  unsigned char *image_data =
-      stbi_load("assets/block.png", &image_width, &image_height, nullptr, 3);
-  stbi_set_flip_vertically_on_load(false);
-  if (image_data) {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image_width, image_height, 0,
-                 GL_RGB, GL_UNSIGNED_BYTE, image_data);
-    stbi_image_free(image_data);
-  } else {
-    std::cerr << "Failed to load texture.\n";
-  }
-
-  glGenerateMipmap(GL_TEXTURE_2D);
-
-  glBindTexture(GL_TEXTURE_2D, 0);
-
-  // Load highlight texture
-
-  glGenTextures(1, &highlight_texture_);
-  glBindTexture(GL_TEXTURE_2D, highlight_texture_);
-
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-  stbi_set_flip_vertically_on_load(true);
-  image_data =
-      stbi_load("assets/highlight.png", &image_width, &image_height, nullptr, 4);
-  stbi_set_flip_vertically_on_load(false);
-  if (image_data) {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width, image_height, 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE, image_data);
-    stbi_image_free(image_data);
-  } else {
-    std::cerr << "Failed to load texture.\n";
-  }
-
-  glBindTexture(GL_TEXTURE_2D, 0);
-
-  // Load crosshair texture
-
-  glGenTextures(1, &crosshair_texture_);
-  glBindTexture(GL_TEXTURE_2D, crosshair_texture_);
-
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-  stbi_set_flip_vertically_on_load(true);
-  image_data =
-      stbi_load("assets/crosshair.png", &image_width, &image_height, nullptr, 4);
-  stbi_set_flip_vertically_on_load(false);
-  if (image_data) {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width, image_height, 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE, image_data);
-    stbi_image_free(image_data);
-  } else {
-    std::cerr << "Failed to load texture.\n";
-  }
-
-  glBindTexture(GL_TEXTURE_2D, 0);
-
-  // Load shaders
-
-  block_shader_program_ = renderer_->CreateShaderProgram(
-      kBlockVertexShaderText, kBlockFragmentShaderText);
-  highlight_shader_program_ = renderer_->CreateShaderProgram(
-      kHighlightVertexShaderText, kHighlightFragmentShaderText);
-  crosshair_shader_program_ = renderer_->CreateShaderProgram(
-      kCrosshairVertexShaderText, kCrosshairFragmentShaderText);
+  block_shader_program_ =
+      renderer_->LoadShaderProgram("assets/shaders/block");
+  highlight_shader_program_ =
+      renderer_->LoadShaderProgram("assets/shaders/highlight");
+  crosshair_shader_program_ =
+      renderer_->LoadShaderProgram("assets/shaders/crosshair");
 }
 
 void Game::Run() {

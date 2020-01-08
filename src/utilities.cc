@@ -17,7 +17,20 @@
 
 #include <cstdlib>
 #include <ctime>
+#include <fstream>
+#include <sstream>
 
 void SeedRandom() {
   srand(static_cast<unsigned int>(time(nullptr)));
+}
+
+bool LoadFile(const std::string &path, std::string *data) {
+  std::ifstream file(path.c_str());
+  if (!file) {
+    return false;
+  }
+  std::stringstream buffer;
+  buffer << file.rdbuf();
+  *data = buffer.str();
+  return true;
 }

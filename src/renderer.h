@@ -90,9 +90,15 @@ class Renderer {
     camera_rotation_ = camera_rotation;
   }
 
+  GLuint LoadShaderProgram(const std::string &shader_path);
   GLuint CreateShaderProgram(const std::string &vertex_shader_text,
                              const std::string &fragment_shader_text);
+  GLuint CreateShaderProgram(GLuint vertex_shader,
+                             GLuint fragment_shader);
+  GLuint LoadShader(const std::string &path, GLenum type);
   GLuint CreateShader(const std::string &text, GLenum type);
+
+  GLuint LoadTexture(const std::string &image_path);
 
  private:
   static void GLAPIENTRY OnGlError(GLenum source, GLenum type, GLuint id,

@@ -16,7 +16,9 @@
 #ifndef UTILITIES_H_
 #define UTILITIES_H_
 
-#include <glm/glm.hpp>
+#include <string>
+
+#include "glm/glm.hpp"
 
 void SeedRandom();
 
@@ -27,5 +29,7 @@ static float RandomFloat() {
 static float FloorNearestMultiple(float num, float multiple) {
   return glm::floor(num / multiple) * multiple;
 }
+
+bool LoadFile(const std::string &path, std::string *data);
 
 #endif  // UTILITIES_H_
