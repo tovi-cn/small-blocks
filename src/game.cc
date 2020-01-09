@@ -499,6 +499,7 @@ void Game::SetBlock(float x, float y, float z, int dimension, int value) {
 }
 
 void Game::ShrinkSize() {
+  // TODO: Is it more logical if the dimension decreases when shrinking?
   ++size_dimension_;
   size_dimension_ = glm::min(size_dimension_, kMinSizeDimension);
 }
