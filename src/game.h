@@ -73,6 +73,7 @@ class Game : public InputListener {
 
   void Update(float delta_time);
   void UpdatePlayer(float delta_time);
+  void HandleCollisions();
 
   void Render();
   void DrawBlock(Block *block, float x, float y, float z, float size);

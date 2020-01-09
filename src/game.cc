@@ -238,6 +238,8 @@ void Game::Update(float delta_time) {
   } else {
     highlight_mesh_->set_hidden(true);
   }
+
+  HandleCollisions();
 }
 
 void Game::UpdatePlayer(float delta_time) {
@@ -290,6 +292,10 @@ void Game::UpdatePlayer(float delta_time) {
   camera_position.y += player_height;
   renderer_->set_camera_position(camera_position);
   renderer_->set_camera_rotation(player_rotation_);
+}
+
+void Game::HandleCollisions() {
+  // Ignore float precision for now.
 }
 
 void Game::GenerateWorld() {
