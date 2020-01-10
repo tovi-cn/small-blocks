@@ -30,9 +30,11 @@ static const int kMaxSizeDimension = -1;
 static const int kMinSizeDimension = 5;
 static const int kDefaultSizeDimension = 0;
 
-static const int kMaxBlockDimension = 1;
-static const int kMinBlockDimension = 16;
 static const int kDefaultBlockDimension = 4;
+// static const int kMaxBlockDimension = 1;
+static const int kMaxBlockDimension = kMaxSizeDimension + kDefaultBlockDimension;
+// static const int kMinBlockDimension = 16;
+static const int kMinBlockDimension = kMinSizeDimension + kDefaultBlockDimension;
 
 static const int kNoValue = 0x000000;  // Should always equal to 0.
 static const int kColor1 = 0xeeeeee;   // White
@@ -328,8 +330,11 @@ void Game::UpdatePlayer(float delta_time) {
   // player_position_.z =
   //     glm::clamp(player_position_.z, -kWorldSize, 2 * kWorldSize);
 
-  if (player_body_->position().y < -8 * kWorldSize) {
-    player_body_->position().y = 8 * kWorldSize;
+  if (player_body_->position().y < -12 * kWorldSize) {
+    player_body_->position().x = kWorldSize / 2.0f;
+    player_body_->position().z = kWorldSize / 2.0f;
+    player_body_->position().y = 12 * kWorldSize;
+    player_body_->velocity().y = player_body_->acceleration().y;
   }
 
   player_position_ = player_body_->position();
@@ -626,8 +631,12 @@ void Game::SetBlock(float x, float y, float z, int dimension, int value) {
 }
 
 void Game::ShrinkSize() {
+  if (size_dimension_ >= kMinSizeDimension) {
+    return;
+  }
   // TODO: Is it more logical if the dimension decreases when shrinking?
   ++size_dimension_;
+  // TODO: Redundant from if statement above
   size_dimension_ = glm::min(size_dimension_, kMinSizeDimension);
 
   player_body_->position().y -= (player_body_->size().y / 2.0f) / 2.0f;
