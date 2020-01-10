@@ -23,10 +23,11 @@
 
 #include "utilities.h"
 
-static const float kWorldSize = 10;
+static const float kWorldSize = 10.0f;
 
 static const int kMaxSizeDimension = -1;
-static const int kMinSizeDimension = 8;
+// static const int kMinSizeDimension = 8;
+static const int kMinSizeDimension = 5;
 static const int kDefaultSizeDimension = 0;
 
 static const int kMaxBlockDimension = 1;
@@ -49,7 +50,7 @@ Game::Game(Window *window, Renderer *renderer, InputSystem *input)
       mouse_last_position_(0.0f),
       mouse_delta_(0.0f),
       wireframe_(false),
-      player_position_(0.0f), player_rotation_(0.0f),
+      player_position_(0.0f), player_rotation_(0.0f), player_body_(nullptr),
       size_dimension_(kDefaultSizeDimension),
       block_dimension_(kDefaultBlockDimension),
       speed_(0.0f),
@@ -59,6 +60,7 @@ Game::Game(Window *window, Renderer *renderer, InputSystem *input)
       block_interval_(kBlockInterval), last_block_time_(0.0),
       ray_cast_hit_(),
       world_(),
+      bodies_(),
       block_geometry_(),
       block_material_(),
       block_mesh_(nullptr),
@@ -84,6 +86,10 @@ Game::~Game() {
   delete crosshair_mesh_;
 
   delete world_;
+
+  for (Body *body : bodies_) {
+    delete body;
+  }
 }
 
 bool Game::Initialize() {
@@ -154,10 +160,26 @@ bool Game::Initialize() {
 
   GenerateWorld();
 
+  Body *world_body =
+      new BoxBody(glm::vec3(kWorldSize, kWorldSize / 2.0f, kWorldSize));
+  bodies_.push_back(world_body);
+  world_body->set_fixed(true);
+  world_body->position() = glm::vec3(kWorldSize / 2.0f,
+                                     // -(kWorldSize / 2.0f) / 2.0f,
+                                     (kWorldSize / 2.0f) / 2.0f,
+                                     kWorldSize / 2.0f);
+
   // Player
 
-  player_position_ =
-      glm::vec3(kWorldSize / 2.0f, kWorldSize / 2.0f, kWorldSize / 2.0f);
+  player_rotation_ = glm::vec3(0.0f, 0.0f, 0.0f);
+  player_body_ = new BoxBody(glm::vec3(0.5f, 1.0f, 0.5f));
+  bodies_.push_back(player_body_);
+  player_body_->position() = glm::vec3(kWorldSize / 2.0f,
+                                       kWorldSize / 2.0f + 1.0f,
+                                       kWorldSize / 2.0f);
+  player_body_->position().y += player_body_->size().y / 2.0f;
+  player_position_ = player_body_->position();
+  player_position_.y -= player_body_->size().y / 2.0f;
 
   return true;
 }
@@ -208,6 +230,13 @@ void Game::Update(float delta_time) {
 
   ray_cast_hit_ = RayCastBlock();
 
+  for (Body *body : bodies_) {
+    body->position() += body->velocity() * delta_time;
+    body->velocity() += body->acceleration() * delta_time;
+  }
+
+  HandleCollisions();
+
   double time = input_->GetTime();
   if (placing_ && time - last_block_time_ >= block_interval_) {
     PlaceBlock();
@@ -238,8 +267,6 @@ void Game::Update(float delta_time) {
   } else {
     highlight_mesh_->set_hidden(true);
   }
-
-  HandleCollisions();
 }
 
 void Game::UpdatePlayer(float delta_time) {
@@ -268,34 +295,134 @@ void Game::UpdatePlayer(float delta_time) {
   if (input_->KeyIsPressed(KEY_D)) {
     direction += right;
   }
-  if (direction != glm::vec3(0.0f)) {
-    player_position_ += glm::normalize(direction) * speed_ * delta_time;
+  if (direction == glm::vec3(0.0f)) {
+    player_body_->velocity().x = 0.0f;
+    player_body_->velocity().z = 0.0f;
+  } else {
+    glm::vec3 velocity = glm::normalize(direction) * speed_;
+    player_body_->velocity().x = velocity.x;
+    player_body_->velocity().z = velocity.z;
   }
 
   if (input_->KeyIsPressed(KEY_SPACE)) {
-    player_position_ += up * speed_ * delta_time;
-  }
-  if (input_->KeyIsPressed(KEY_LEFT_SHIFT)) {
-    player_position_ -= up * speed_ * delta_time;
+    player_body_->velocity().y = 3.0f * glm::pow(2.0f, -size_dimension_);
   }
 
-  player_position_.x =
-      glm::clamp(player_position_.x, -kWorldSize, 2 * kWorldSize);
-  player_position_.y =
-      glm::clamp(player_position_.y, -kWorldSize, 2 * kWorldSize);
-  player_position_.z =
-      glm::clamp(player_position_.z, -kWorldSize, 2 * kWorldSize);
+  player_body_->acceleration().y = -9.0f * glm::pow(2.0f, -size_dimension_);
 
-  glm::vec3 camera_position = player_position_;
-  // TODO: float player_height = glm::pow(2.0f, -size_dimension_);
-  float player_height = 1.0f;
-  camera_position.y += player_height;
+  // if (input_->KeyIsPressed(KEY_SPACE)) {
+  //   player_position_ += up * speed_ * delta_time;
+  // }
+  // if (input_->KeyIsPressed(KEY_LEFT_SHIFT)) {
+  //   player_position_ -= up * speed_ * delta_time;
+  // }
+
+  // player_position_ = player_body_->position();
+  // player_position_.y -= player_body_->size().y / 2.0f;
+
+  // TODO
+  // player_position_.x =
+  //     glm::clamp(player_position_.x, -kWorldSize, 2 * kWorldSize);
+  // player_position_.y =
+  //     glm::clamp(player_position_.y, -kWorldSize, 2 * kWorldSize);
+  // player_position_.z =
+  //     glm::clamp(player_position_.z, -kWorldSize, 2 * kWorldSize);
+
+  if (player_body_->position().y < -8 * kWorldSize) {
+    player_body_->position().y = 8 * kWorldSize;
+  }
+
+  player_position_ = player_body_->position();
+  player_position_.y -= player_body_->size().y / 2.0f;
+
+  float player_height = glm::pow(2.1f, -size_dimension_);
+  player_body_->size().y = player_height;
+
+  glm::vec3 camera_position = player_body_->position();
+  camera_position.y += player_body_->size().y / 2.0f;
   renderer_->set_camera_position(camera_position);
   renderer_->set_camera_rotation(player_rotation_);
 }
 
+void ResolveCollision(Body *body1, Body *body2) {
+  BoundingBox box1 = body1->GetBoundingBox();
+  BoundingBox box2 = body2->GetBoundingBox();
+
+  // Swap the bodies if the second body has a velocity.
+  // Note: this doesn't currently handle collisions with two moving bodies.
+  if (body2->velocity() != glm::vec3(0.0f)) {
+    Body *tmp = body1;
+    body1 = body2;
+    body2 = tmp;
+  }
+
+  float overlap_x = glm::min(box1.right - box2.left, box2.right - box1.left);
+  float overlap_y = glm::min(box1.top - box2.bottom, box2.top - box1.bottom);
+  float overlap_z = glm::min(box1.front - box2.back, box2.front - box1.back);
+
+  float bounce = 0.0f;
+
+  if (overlap_x <= overlap_y && overlap_x <= overlap_z) {
+    if (body1->position().x < body2->position().x) {
+      body1->position().x -= overlap_x;
+      if (body1->velocity().x > 0.0f) {
+        body1->velocity().x *= -bounce;
+      }
+    } else {
+      body1->position().x += overlap_x;
+      if (body1->velocity().x < 0.0f) {
+        body1->velocity().x *= -bounce;
+      }
+    }
+  } else if (overlap_y <= overlap_x && overlap_y <= overlap_z) {
+    if (body1->position().y < body2->position().y) {
+      body1->position().y -= overlap_y;
+      if (body1->velocity().y > 0.0f) {
+        body1->velocity().y *= -bounce;
+      }
+    } else {
+      body1->position().y += overlap_y;
+      if (body1->velocity().y < 0.0f) {
+        body1->velocity().y *= -bounce;
+      }
+    }
+  } else {
+    if (body1->position().z < body2->position().z) {
+      body1->position().z -= overlap_z;
+      if (body1->velocity().z > 0.0f) {
+        body1->velocity().z *= -bounce;
+      }
+    } else {
+      body1->position().z += overlap_z;
+      if (body1->velocity().z < 0.0f) {
+        body1->velocity().z *= -bounce;
+      }
+    }
+  }
+}
+
 void Game::HandleCollisions() {
   // Ignore float precision for now.
+
+  for (size_t i = 0; i < bodies_.size(); ++i) {
+    Body *body1 = bodies_[i];
+    for (size_t j = i + 1; j < bodies_.size(); ++j) {
+      Body *body2 = bodies_[j];
+      float x1 = body1->position().x;
+      float y1 = body1->position().y;
+      float z1 = body1->position().z;
+      float x2 = body2->position().x;
+      float y2 = body2->position().y;
+      float z2 = body2->position().z;
+      std::cout << "body1: " << x1 << ", " << y1 << ", " << z1 << "\n";
+      std::cout << "body2: " << x2 << ", " << y2 << ", " << z2 << "\n";
+      if (body1->CollidesWith(body2) &&
+          !(body1->is_fixed() && body2->is_fixed())) {
+        std::cout << "COLLIDES\n";
+        ResolveCollision(body1, body2);
+      }
+    }
+  }
 }
 
 void Game::GenerateWorld() {
@@ -502,11 +629,17 @@ void Game::ShrinkSize() {
   // TODO: Is it more logical if the dimension decreases when shrinking?
   ++size_dimension_;
   size_dimension_ = glm::min(size_dimension_, kMinSizeDimension);
+
+  player_body_->position().y -= (player_body_->size().y / 2.0f) / 2.0f;
+
+  ShrinkBlock();
 }
 
 void Game::GrowSize() {
   --size_dimension_;
   size_dimension_ = glm::max(size_dimension_, kMaxSizeDimension);
+
+  GrowBlock();
 }
 
 void Game::ShrinkBlock() {

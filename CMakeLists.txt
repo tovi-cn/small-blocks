@@ -39,10 +39,11 @@ add_executable(small-blocks
   src/fractals.cc
   src/game.cc
   src/geometry.cc
-  src/input_system.cc
+  src/input.cc
   src/main.cc
   src/material.cc
   src/mesh.cc
+  src/physics.cc
   src/renderer.cc
   src/utilities.cc
   src/window.cc

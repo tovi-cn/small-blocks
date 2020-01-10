@@ -24,9 +24,10 @@
 
 #include "block.h"
 #include "geometry.h"
-#include "input_system.h"
+#include "input.h"
 #include "material.h"
 #include "renderer.h"
+#include "physics.h"
 #include "window.h"
 
 class Game : public InputListener {
@@ -92,6 +93,8 @@ class Game : public InputListener {
 
   glm::vec3 player_position_;
   glm::vec3 player_rotation_;
+  BoxBody *player_body_;
+
   int size_dimension_;
   int block_dimension_;
   float speed_;
@@ -103,6 +106,8 @@ class Game : public InputListener {
   RayCastHit ray_cast_hit_;
 
   Block *world_;
+
+  std::vector<Body *> bodies_;
 
   GLuint block_texture_;
   GLuint highlight_texture_;

@@ -13,8 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef INPUT_SYSTEM_H_
-#define INPUT_SYSTEM_H_
+#ifndef INPUT_H_
+#define INPUT_H_
 
 #include <bitset>
 #include <vector>
@@ -84,4 +84,4 @@ class InputSystem {
   std::vector<InputListener *> listeners_;
 };
 
-#endif  // INPUT_SYSTEM_H_
+#endif  // INPUT_H_

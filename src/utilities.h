@@ -20,6 +20,36 @@
 
 #include "glm/glm.hpp"
 
+struct BoundingBox {
+  BoundingBox() : BoundingBox(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f) {}
+
+  BoundingBox(float left, float right, float top, float bottom,
+              float front, float back)
+      : left(left), right(right),
+        top(top), bottom(bottom),
+        front(front), back(back) {}
+
+  float left;
+  float right;
+  float top;
+  float bottom;
+  float front;
+  float back;
+};
+
+// #include <iostream>
+static bool Intersects(BoundingBox b1, BoundingBox b2) {
+  // std::cout << "box 1: " << b1.left << ", " << b1.right << ", " << b1.top << ", " << b1.bottom << ", " << b1.front << ", " << b1.back << "\n";
+  // std::cout << "box 2: " << b2.left << ", " << b2.right << ", " << b2.top << ", " << b2.bottom << ", " << b2.front << ", " << b2.back << "\n";
+  // Assuming coordinate system used in OpenGL.
+  return !(b1.left >= b2.right ||
+           b1.right <= b2.left ||
+           b1.top <= b2.bottom ||
+           b1.bottom >= b2.top ||
+           b1.front <= b2.back ||
+           b1.back >= b2.front);
+}
+
 void SeedRandom();
 
 static float RandomFloat() {

@@ -18,7 +18,7 @@
 #include "glm/glm.hpp"
 
 #include "game.h"
-#include "input_system.h"
+#include "input.h"
 #include "renderer.h"
 #include "utilities.h"
 #include "window.h"

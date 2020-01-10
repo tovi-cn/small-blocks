@@ -50,7 +50,7 @@ class RectangleBody extends Body {
     this.height = height;
   }
 
-  collidesWith(body) {
+  collidesWith(body, collisionSides) {
     if (body instanceof PointBody) {
       return body.collidesWith(this);
     } else if (body instanceof RectangleBody) {
