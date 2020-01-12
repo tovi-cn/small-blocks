@@ -23,6 +23,8 @@
 
 #include "utilities.h"
 
+static const float kMouseSensitivity = 0.003f;
+
 static const float kWorldSize = 10.0f;
 
 static const float kPlayerSpeed = 1.25f;
@@ -54,6 +56,7 @@ Game::Game(Window *window, Renderer *renderer, InputSystem *input)
       window_focused_(false),
       mouse_last_position_(0.0f),
       mouse_delta_(0.0f),
+      mouse_sensitivity_(kMouseSensitivity),
       wireframe_(false),
       player_rotation_(0.0f), player_body_(nullptr),
       size_dimension_(kDefaultSizeDimension),
@@ -277,9 +280,8 @@ void Game::Update(float delta_time) {
 }
 
 void Game::UpdatePlayer(float delta_time) {
-  float mouse_sensitivity = 0.005f;
-  player_rotation_.x += -mouse_delta_.y * mouse_sensitivity;
-  player_rotation_.y += -mouse_delta_.x * mouse_sensitivity;
+  player_rotation_.x += -mouse_delta_.y * mouse_sensitivity_;
+  player_rotation_.y += -mouse_delta_.x * mouse_sensitivity_;
   player_rotation_.x = glm::clamp(player_rotation_.x, glm::radians(-89.99f),
                                   glm::radians(89.99f));
 

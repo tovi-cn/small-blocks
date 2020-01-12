@@ -94,6 +94,7 @@ class Game : public InputListener {
   bool window_focused_;
   glm::vec2 mouse_last_position_;
   glm::vec2 mouse_delta_;
+  float mouse_sensitivity_;
 
   float wireframe_;
 
