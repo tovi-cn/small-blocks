@@ -26,13 +26,16 @@
 static const float kWorldSize = 10.0f;
 
 static const int kMaxSizeDimension = -1;
+// TODO
 // static const int kMinSizeDimension = 8;
 static const int kMinSizeDimension = 5;
 static const int kDefaultSizeDimension = 0;
 
 static const int kDefaultBlockDimension = 4;
+// TODO
 // static const int kMaxBlockDimension = 1;
 static const int kMaxBlockDimension = kMaxSizeDimension + kDefaultBlockDimension;
+// TODO
 // static const int kMinBlockDimension = 16;
 static const int kMinBlockDimension = kMinSizeDimension + kDefaultBlockDimension;
 
@@ -162,12 +165,13 @@ bool Game::Initialize() {
 
   GenerateWorld();
 
-  Body *world_body =
+  BoxBody *world_body =
       new BoxBody(glm::vec3(kWorldSize, kWorldSize / 2.0f, kWorldSize));
+  // TODO: Add collision bodies for the world dynamically based on which
+  // blocks have been placed or broken.
   bodies_.push_back(world_body);
   world_body->set_fixed(true);
   world_body->position() = glm::vec3(kWorldSize / 2.0f,
-                                     // -(kWorldSize / 2.0f) / 2.0f,
                                      (kWorldSize / 2.0f) / 2.0f,
                                      kWorldSize / 2.0f);
 
@@ -176,9 +180,11 @@ bool Game::Initialize() {
   player_rotation_ = glm::vec3(0.0f, 0.0f, 0.0f);
   player_body_ = new BoxBody(glm::vec3(0.5f, 1.0f, 0.5f));
   bodies_.push_back(player_body_);
-  player_body_->position() = glm::vec3(kWorldSize / 2.0f,
-                                       kWorldSize / 2.0f + 1.0f,
-                                       kWorldSize / 2.0f);
+  player_body_->position() =
+      glm::vec3(kWorldSize / 2.0f,
+                kWorldSize / 2.0f + world_body->position().y
+                    + world_body->size().y / 2.0f,
+                kWorldSize / 2.0f);
   player_body_->position().y += player_body_->size().y / 2.0f;
   player_position_ = player_body_->position();
   player_position_.y -= player_body_->size().y / 2.0f;
@@ -276,7 +282,7 @@ void Game::UpdatePlayer(float delta_time) {
   player_rotation_.x += -mouse_delta_.y * mouse_sensitivity;
   player_rotation_.y += -mouse_delta_.x * mouse_sensitivity;
   player_rotation_.x = glm::clamp(player_rotation_.x, glm::radians(-89.99f),
-      glm::radians(89.99f));
+                                  glm::radians(89.99f));
 
   glm::vec3 forward = renderer_->GetCameraForward();
   forward.y = 0.0f;
@@ -321,14 +327,6 @@ void Game::UpdatePlayer(float delta_time) {
 
   // player_position_ = player_body_->position();
   // player_position_.y -= player_body_->size().y / 2.0f;
-
-  // TODO
-  // player_position_.x =
-  //     glm::clamp(player_position_.x, -kWorldSize, 2 * kWorldSize);
-  // player_position_.y =
-  //     glm::clamp(player_position_.y, -kWorldSize, 2 * kWorldSize);
-  // player_position_.z =
-  //     glm::clamp(player_position_.z, -kWorldSize, 2 * kWorldSize);
 
   if (player_body_->position().y < -12 * kWorldSize) {
     player_body_->position().x = kWorldSize / 2.0f;
@@ -413,17 +411,17 @@ void Game::HandleCollisions() {
     Body *body1 = bodies_[i];
     for (size_t j = i + 1; j < bodies_.size(); ++j) {
       Body *body2 = bodies_[j];
-      float x1 = body1->position().x;
-      float y1 = body1->position().y;
-      float z1 = body1->position().z;
-      float x2 = body2->position().x;
-      float y2 = body2->position().y;
-      float z2 = body2->position().z;
-      std::cout << "body1: " << x1 << ", " << y1 << ", " << z1 << "\n";
-      std::cout << "body2: " << x2 << ", " << y2 << ", " << z2 << "\n";
+      // float x1 = body1->position().x;
+      // float y1 = body1->position().y;
+      // float z1 = body1->position().z;
+      // float x2 = body2->position().x;
+      // float y2 = body2->position().y;
+      // float z2 = body2->position().z;
+      // std::cout << "body1: " << x1 << ", " << y1 << ", " << z1 << "\n";
+      // std::cout << "body2: " << x2 << ", " << y2 << ", " << z2 << "\n";
       if (body1->CollidesWith(body2) &&
           !(body1->is_fixed() && body2->is_fixed())) {
-        std::cout << "COLLIDES\n";
+        // std::cout << "COLLIDES\n";
         ResolveCollision(body1, body2);
       }
     }
@@ -471,6 +469,10 @@ Game::RayCastHit Game::RayCastBlock() {
   glm::vec3 direction = renderer_->GetCameraForward();
 
   int num_steps = 10000;
+  float block_size = kWorldSize * glm::pow(2.0f, -block_dimension_);
+  float step_size =
+      0.05f * glm::pow(2.0f, static_cast<float>(-block_dimension_));
+
   for (int i = 0; i < num_steps; ++i) {
     int dimension;
     Block *block = GetBlock(hit.position.x, hit.position.y, hit.position.z,
@@ -478,8 +480,6 @@ Game::RayCastHit Game::RayCastBlock() {
     if (block && (!block->is_leaf() || block->value() != kNoValue)) {
       hit.block = block;
       hit.dimension = dimension;
-
-      float block_size = kWorldSize * glm::pow(2.0f, -block_dimension_);
 
       hit.position.x = FloorNearestMultiple(hit.position.x, block_size);
       hit.position.y = FloorNearestMultiple(hit.position.y, block_size);
@@ -496,8 +496,6 @@ Game::RayCastHit Game::RayCastBlock() {
     }
 
     hit.previous_position = hit.position;
-    float step_size =
-        0.05f * glm::pow(2.0f, static_cast<float>(-block_dimension_));
     hit.position += direction * step_size;
   }
 
