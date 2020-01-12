@@ -1,5 +1,3 @@
-Restrict player growth where space is limited.
-
 Walk over very low blocks (inclines) without jumping.
 
 Make growth/shrink transition smooth.

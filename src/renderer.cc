@@ -24,8 +24,8 @@
 
 static const float kDefaultFov = glm::radians(90.0f);
 static const float kDefaultAspect = 1.0f;
-static const float kDefaultNear = 0.01f;
-static const float kDefaultFar = 500.0f;
+static const float kDefaultNear = 0.001f;
+static const float kDefaultFar = 1000.0f;
 
 static const std::string kVertexShaderFileExtension = ".vert";
 static const std::string kFragmentShaderFileExtension = ".frag";

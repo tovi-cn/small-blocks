@@ -7,7 +7,7 @@ let pressed = [];
 let lastTime = Date.now();
 
 let bodies = [];
-let thin;
+let varyingSizeBody;
 
 let player;
 let speed = 250;
@@ -27,6 +27,7 @@ function initialize() {
   player = new RectangleBody(playerNormalWidth, playerNormalHeight);
   player.position = [75, 75];
   player.color = '#f00';
+  updatePlayerSize();
   bodies.push(player);
 
   createWorld();
@@ -41,7 +42,7 @@ function createWorld() {
   addRectangleRock(375, 175, 80, 80);
   addRectangleRock(600, 175, 110, 110);
 
-  thin = addRectangleRock(600, 425, 110, 10);
+  varyingSizeBody = addRectangleRock(600, 425, 110, 10);
 
   addCircleRock(200, 425, 20);
   addCircleRock(375, 425, 40);
@@ -88,9 +89,6 @@ function update(dt) {
   if (pressed[keyCode['Up']]) {
     direction[1] -= 1;
   }
-  // if (pressed[keyCode['Down']]) {
-  //   direction[1] += 1;
-  // }
   player.velocity[0] = 0;
   if (magnitude(direction)) {
     direction = normalize(direction);
@@ -101,11 +99,8 @@ function update(dt) {
   }
   player.acceleration[1] = 1000;
 
-  player.width = Math.pow(2, -sizeDimension) * playerNormalWidth;
-  player.height = Math.pow(2, -sizeDimension) * playerNormalHeight;
-
-  thin.width = 150 + Math.cos(Date.now() * 0.001 + 1) * 50;
-  thin.height = 50 + Math.sin(Date.now() * 0.02) * 25;
+  varyingSizeBody.width = 150 + Math.cos(Date.now() * 0.001 + 1) * 50;
+  varyingSizeBody.height = 50 + Math.sin(Date.now() * 0.02) * 25;
 
   for (let i = 0; i < bodies.length; ++i) {
     bodies[i].update(dt);
@@ -215,16 +210,37 @@ function renderBody(body) {
   }
 }
 
+function updatePlayerSize() {
+  player.width = Math.pow(2, -sizeDimension) * playerNormalWidth;
+  player.height = Math.pow(2, -sizeDimension) * playerNormalHeight;
+}
+
+function playerCollidesWithWorld() {
+  for (let i = 0; i < bodies.length; ++i) {
+    if (player !== bodies[i] && player.collidesWith(bodies[i])) {
+      return true;
+    }
+  }
+  return false;
+}
+
 window.addEventListener('keydown', function(e) {
   pressed[e.keyCode] = true;
 
   if (pressed[keyCode['Q']]) {
     ++sizeDimension;
     sizeDimension = Math.min(sizeDimension, minSizeDimension);
+    // There is nothing preventing you from shrinking.
+    updatePlayerSize();
   }
   if (pressed[keyCode['E']]) {
     --sizeDimension;
     sizeDimension = Math.max(sizeDimension, maxSizeDimension);
+    updatePlayerSize();
+    if (playerCollidesWithWorld()) {
+      ++sizeDimension;
+      updatePlayerSize();
+    }
   }
 });
 

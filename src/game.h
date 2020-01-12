@@ -58,6 +58,7 @@ class Game : public InputListener {
   void GrowSize();
   void ShrinkBlock();
   void GrowBlock();
+  void SetPlayerSize(int dimension);
   void SetColor(int color);
 
   void FocusWindow();
@@ -75,6 +76,7 @@ class Game : public InputListener {
   void Update(float delta_time);
   void UpdatePlayer(float delta_time);
   void HandleCollisions();
+  bool PlayerCollidesWithWorld() const;
   void ResolveBoxCollision(Body *body1, Body *body2);
   void UpdateWorldCollisionBodies();
   void AddWorldCollisionBody(Block *block, float x, float y, float z,
@@ -101,6 +103,7 @@ class Game : public InputListener {
   int size_dimension_;
   int block_dimension_;
   float speed_;
+  bool running_;
   int color_;
   bool placing_;
   bool breaking_;

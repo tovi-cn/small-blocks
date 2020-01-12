@@ -25,19 +25,19 @@
 
 static const float kWorldSize = 10.0f;
 
-static const int kMaxSizeDimension = -1;
-// TODO
-// static const int kMinSizeDimension = 8;
+static const float kPlayerSpeed = 1.25f;
+static const float kPlayerRunSpeed = 2.0f * kPlayerSpeed;
+static const float kPlayerHeight = 2.0f;
+
+static const int kMaxSizeDimension = -3;
 static const int kMinSizeDimension = 5;
 static const int kDefaultSizeDimension = 0;
 
 static const int kDefaultBlockDimension = 4;
-// TODO
-// static const int kMaxBlockDimension = 1;
-static const int kMaxBlockDimension = kMaxSizeDimension + kDefaultBlockDimension;
-// TODO
-// static const int kMinBlockDimension = 16;
-static const int kMinBlockDimension = kMinSizeDimension + kDefaultBlockDimension;
+static const int kMaxBlockDimension =
+    kMaxSizeDimension + kDefaultBlockDimension;
+static const int kMinBlockDimension =
+    kMinSizeDimension + kDefaultBlockDimension;
 
 static const int kNoValue = 0x000000;  // Should always equal to 0.
 static const int kColor1 = 0xeeeeee;   // White
@@ -59,6 +59,7 @@ Game::Game(Window *window, Renderer *renderer, InputSystem *input)
       size_dimension_(kDefaultSizeDimension),
       block_dimension_(kDefaultBlockDimension),
       speed_(0.0f),
+      running_(false),
       color_(kDefaultColor),
       breaking_(false),
       placing_(false),
@@ -224,7 +225,8 @@ void Game::Update(float delta_time) {
     mouse_delta_ = glm::vec2(0.0f);
   }
 
-  speed_ = glm::pow(2.0f, -size_dimension_);
+  speed_ = running_ ? kPlayerRunSpeed : kPlayerSpeed;
+  speed_ *= glm::pow(2.0f, -size_dimension_);
 
   UpdatePlayer(delta_time);
 
@@ -313,6 +315,12 @@ void Game::UpdatePlayer(float delta_time) {
     player_body_->velocity().y = 3.0f * glm::pow(2.0f, -size_dimension_);
   }
 
+  if (input_->KeyIsPressed(KEY_LEFT_SHIFT)) {
+    running_ = true;
+  } else {
+    running_ = false;
+  }
+
   player_body_->acceleration().y = -9.0f * glm::pow(2.0f, -size_dimension_);
 
   if (player_body_->position().y < -12 * kWorldSize) {
@@ -321,11 +329,6 @@ void Game::UpdatePlayer(float delta_time) {
     player_body_->position().y = 12 * kWorldSize;
     player_body_->velocity().y = player_body_->acceleration().y;
   }
-
-  float extra_height = 0.1f;  // Prevents rounding issues in smaller sizes.
-  float player_height = glm::pow(2.0f + extra_height, -size_dimension_);
-  float player_width = player_height * 0.33f;
-  player_body_->size() = glm::vec3(player_width, player_height, player_width);
 
   glm::vec3 camera_position = player_body_->position();
   camera_position.y += player_body_->size().y / 2.0f;
@@ -343,6 +346,16 @@ void Game::HandleCollisions() {
       ResolveBoxCollision(body1, body2);
     }
   }
+}
+
+bool Game::PlayerCollidesWithWorld() const {
+  for (size_t i = 0; i < world_bodies_.size(); ++i) {
+    BoxBody *body = world_bodies_[i];
+    if (player_body_->CollidesWith(body)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void Game::ResolveBoxCollision(Body *body1, Body *body2) {
@@ -650,24 +663,39 @@ void Game::SetBlock(float x, float y, float z, int dimension, int value) {
   world_changed_ = true;
 }
 
+void Game::SetPlayerSize(int dimension) {
+  float last_player_height = player_body_->size().y;
+
+  float player_height = glm::pow(kPlayerHeight, -size_dimension_);
+  float player_width = player_height * 0.25f;
+  player_body_->size() = glm::vec3(player_width, player_height, player_width);
+
+  float height_offset = (player_body_->size().y - last_player_height) / 2.0f;
+  player_body_->position().y += height_offset;
+}
+
 void Game::ShrinkSize() {
   if (size_dimension_ >= kMinSizeDimension) {
     return;
   }
-  // TODO: Is it more logical if the dimension decreases when shrinking?
   ++size_dimension_;
-  // TODO: Redundant from if statement above
   size_dimension_ = glm::min(size_dimension_, kMinSizeDimension);
-
-  player_body_->position().y -= (player_body_->size().y / 2.0f) / 2.0f;
-
+  SetPlayerSize(size_dimension_);
   ShrinkBlock();
 }
 
 void Game::GrowSize() {
+  if (size_dimension_ <= kMaxSizeDimension) {
+    return;
+  }
   --size_dimension_;
   size_dimension_ = glm::max(size_dimension_, kMaxSizeDimension);
-
+  SetPlayerSize(size_dimension_);
+  if (PlayerCollidesWithWorld()) {
+    ++size_dimension_;
+    SetPlayerSize(size_dimension_);
+    return;
+  }
   GrowBlock();
 }
 
