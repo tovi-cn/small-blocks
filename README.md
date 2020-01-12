@@ -8,12 +8,11 @@ You can build with extremely large blocks, extremely small blocks, or why not so
 ## Controls
 
 - Move with mouse and `W` `A` `S` `D`
-- Go up with `SPACE` and down with `SHIFT`
+- Fly with `SPACE`
 - Left click to break block
 - Right click to place block
 - Select block color with `1` - `5`
-- Shrink player with `Q` and grow player with `E`
-- Shrink block with `Z` and grow block with `C`
+- Shrink player with `Q` and grow player with `E` (or use scroll wheel)
 
 Other controls:
 
