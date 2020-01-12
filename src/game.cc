@@ -816,10 +816,10 @@ void Game::MouseUp(int button) {
 }
 
 void Game::Scroll(float offset) {
-  if (offset < 0) {
-    ShrinkBlock();
-  } else if (offset > 0) {
-    GrowBlock();
+  if (offset > 0) {
+    ShrinkSize();
+  } else if (offset < 0) {
+    GrowSize();
   }
 }
 
