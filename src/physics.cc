@@ -22,6 +22,14 @@ Body::Body()
 Body::~Body() {
 }
 
+void Body::Update(float delta_time) {
+  if (fixed_) {
+    return;
+  }
+  velocity_ += acceleration_ * delta_time;
+  position_ += velocity_ * delta_time;
+}
+
 BoxBody::BoxBody(glm::vec3 size) : size_(size) {}
 
 BoxBody::~BoxBody() {

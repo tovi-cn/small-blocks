@@ -32,6 +32,8 @@ class Body {
   bool is_fixed() const { return fixed_; }
   void set_fixed(bool fixed) { fixed_ = fixed; }
 
+  void Update(float delta_time);
+
   virtual bool CollidesWith(Body *body) const = 0;
   virtual BoundingBox GetBoundingBox() const = 0;
 

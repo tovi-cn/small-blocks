@@ -75,6 +75,10 @@ class Game : public InputListener {
   void Update(float delta_time);
   void UpdatePlayer(float delta_time);
   void HandleCollisions();
+  void ResolveBoxCollision(Body *body1, Body *body2);
+  void UpdateWorldCollisionBodies();
+  void AddWorldCollisionBody(Block *block, float x, float y, float z,
+                             float size);
 
   void Render();
   void DrawBlock(Block *block, float x, float y, float z, float size);
@@ -91,7 +95,6 @@ class Game : public InputListener {
 
   float wireframe_;
 
-  glm::vec3 player_position_;
   glm::vec3 player_rotation_;
   BoxBody *player_body_;
 
@@ -106,8 +109,8 @@ class Game : public InputListener {
   RayCastHit ray_cast_hit_;
 
   Block *world_;
-
-  std::vector<Body *> bodies_;
+  bool world_changed_;
+  std::vector<BoxBody *> world_bodies_;
 
   GLuint block_texture_;
   GLuint highlight_texture_;
