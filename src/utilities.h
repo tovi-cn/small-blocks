@@ -37,10 +37,7 @@ struct BoundingBox {
   float back;
 };
 
-// #include <iostream>
 static bool Intersects(BoundingBox b1, BoundingBox b2) {
-  // std::cout << "box 1: " << b1.left << ", " << b1.right << ", " << b1.top << ", " << b1.bottom << ", " << b1.front << ", " << b1.back << "\n";
-  // std::cout << "box 2: " << b2.left << ", " << b2.right << ", " << b2.top << ", " << b2.bottom << ", " << b2.front << ", " << b2.back << "\n";
   // Assuming coordinate system used in OpenGL.
   return !(b1.left >= b2.right ||
            b1.right <= b2.left ||
