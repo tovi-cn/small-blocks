@@ -439,6 +439,8 @@ void Game::GenerateWorld() {
 
 void Game::PlaceBlock() {
   RayCastHit hit = RayCastBlock();
+  // TODO: Make sure there are no smaller blocks contained at some dimension
+  // at the previous position.
   if (hit.block && hit.dimension <= block_dimension_) {
     SetBlock(hit.previous_position.x, hit.previous_position.y,
              hit.previous_position.z, block_dimension_, color_);
