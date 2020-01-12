@@ -1,6 +1,4 @@
-Cuboid collision with the player and the world.
 Store the world and load from disk.
-Jetpack flying.
 Better lighting.
 Add background fog when shrinking to cover up render distance.
 
