@@ -5,6 +5,13 @@ You can build with extremely large blocks, extremely small blocks, or why not so
 
 ![](Small_Blocks.png)
 
+## Download
+
+[Windows 64-bit](https://github.com/carlenlund/small-blocks/releases/download/v0.1.0/small-blocks-v0.1.0.zip)
+
+See build instructions below for usage on other platforms.
+
+
 ## Controls
 
 - Move with mouse and `W` `A` `S` `D`
