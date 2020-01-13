@@ -24,6 +24,8 @@ See build instructions below for usage on other platforms.
 Other controls:
 
 - Middle click to copy block
+- Run with `SHIFT`
+- Shrink and grow block independently of player size with `Z` and `C`
 - Regenerate world with `R`
 - Toggle wireframe mode with `G`
 
