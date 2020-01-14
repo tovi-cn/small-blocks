@@ -9,6 +9,9 @@ You can build with extremely large blocks, extremely small blocks, or why not so
 
 [Windows 64-bit](https://github.com/carlenlund/small-blocks/releases/download/v0.1.0/small-blocks-v0.1.0.zip)
 
+Also install Microsoft's [Visual C++ 2019 Redistributable](https://aka.ms/vs/16/release/VC_redist.x64.exe) if you haven't already.
+This makes sure that the program starts correctly with all necessary dependencies.
+
 See build instructions below for usage on other platforms.
 
 
