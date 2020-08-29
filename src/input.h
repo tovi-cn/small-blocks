@@ -15,7 +15,6 @@
 
 #ifndef INPUT_H_
 #define INPUT_H_
-
 #include <bitset>
 #include <vector>
 
@@ -24,6 +23,7 @@
 
 #include "key_code.h"
 #include "window.h"
+#include <stdio.h>
 
 class InputListener {
  public:

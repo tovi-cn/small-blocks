@@ -205,6 +205,7 @@ void Game::LoadAssets() {
 }
 
 void Game::Run() {
+  // 鼠标位置
   mouse_last_position_ = input_->GetMousePosition();
   double last_time = input_->GetTime();
 

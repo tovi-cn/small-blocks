@@ -23,16 +23,19 @@
 #include "utilities.h"
 #include "window.h"
 
-int main() {
+int main()
+{
   SeedRandom();
 
   Window window;
-  if (!window.Initialize("Small Blocks", glm::ivec2(800, 600))) {
+  if (!window.Initialize("Small Blocks", glm::ivec2(800, 600)))
+  {
     return 1;
   }
 
   Renderer renderer(&window);
-  if (!renderer.Initialize()) {
+  if (!renderer.Initialize())
+  {
     return 1;
   }
 
@@ -40,7 +43,8 @@ int main() {
   input.Initialize();
 
   Game game(&window, &renderer, &input);
-  if (!game.Initialize()) {
+  if (!game.Initialize())
+  {
     return 1;
   }
 
