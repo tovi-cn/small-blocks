@@ -32,6 +32,8 @@ static const std::string kFragmentShaderFileExtension = ".frag";
 
 static const int kNumTextureImageComponents = 4;
 
+const GLfloat fog_color[4] = {0.1f, 0.1f, 0.1f, 1.f};
+
 Renderer::Renderer(Window *window)
     : window_(window),
       fov_(kDefaultFov),
@@ -44,14 +46,16 @@ Renderer::Renderer(Window *window)
 
 Renderer::~Renderer() {}
 
-bool Renderer::Initialize() {
-  if (!gladLoadGL()) {
+bool Renderer::Initialize()
+{
+  if (!gladLoadGL())
+  {
     std::cerr << "gladLoadGL() failed\n";
     return false;
   }
 
-	glEnable(GL_DEBUG_OUTPUT);
-	glDebugMessageCallback(OnGlError, 0);
+  glEnable(GL_DEBUG_OUTPUT);
+  glDebugMessageCallback(OnGlError, 0);
 
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_CULL_FACE);
@@ -62,32 +66,46 @@ bool Renderer::Initialize() {
 
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
+  // glEnable(GL_FOG);
+  // glFogfv(GL_FOG_COLOR, fog_color);
+  // glFogi(GL_FOG_MODE, GL_EXP);
+  // glFogf(GL_FOG_DENSITY, 0.35f);
+  // glFogf(GL_FOG_START, 1.0f);
+  // glFogf(GL_FOG_END, 5.0f);
+  // glHint(GL_FOG_HINT, GL_DONT_CARE);
+
   return true;
 }
 
-void Renderer::AddMesh(Mesh *mesh) {
-  if (std::find(render_list_.begin(), render_list_.end(), mesh)
-          != render_list_.end()) {
+void Renderer::AddMesh(Mesh *mesh)
+{
+  if (std::find(render_list_.begin(), render_list_.end(), mesh) != render_list_.end())
+  {
     return;
   }
   render_list_.push_back(mesh);
 }
 
-void Renderer::ClearScreen() {
+void Renderer::ClearScreen()
+{
   glm::ivec2 window_size = window_->GetSize();
   glViewport(0, 0, window_size.x, window_size.y);
 
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void Renderer::Render() {
-  for (auto mesh : render_list_) {
+void Renderer::Render()
+{
+  for (auto mesh : render_list_)
+  {
     RenderMesh(mesh);
   }
 }
 
-void Renderer::RenderMesh(Mesh *mesh) {
-  if (mesh->hidden()) {
+void Renderer::RenderMesh(Mesh *mesh)
+{
+  if (mesh->hidden())
+  {
     return;
   }
 
@@ -120,11 +138,13 @@ void Renderer::RenderMesh(Mesh *mesh) {
   glUseProgram(0);
 }
 
-void Renderer::SwapBuffers() {
+void Renderer::SwapBuffers()
+{
   glfwSwapBuffers(window_->window_glfw());
 }
 
-GLuint Renderer::LoadShaderProgram(const std::string &shader_path) {
+GLuint Renderer::LoadShaderProgram(const std::string &shader_path)
+{
   std::string vertex_shader_path =
       shader_path + kVertexShaderFileExtension;
   GLuint vertex_shader =
@@ -139,7 +159,8 @@ GLuint Renderer::LoadShaderProgram(const std::string &shader_path) {
 }
 
 GLuint Renderer::CreateShaderProgram(const std::string &vertex_shader_text,
-                                     const std::string &fragment_shader_text) {
+                                     const std::string &fragment_shader_text)
+{
   GLuint vertex_shader =
       CreateShader(vertex_shader_text, GL_VERTEX_SHADER);
   GLuint fragment_shader =
@@ -148,7 +169,8 @@ GLuint Renderer::CreateShaderProgram(const std::string &vertex_shader_text,
 }
 
 GLuint Renderer::CreateShaderProgram(GLuint vertex_shader,
-                                     GLuint fragment_shader) {
+                                     GLuint fragment_shader)
+{
   GLuint program = glCreateProgram();
   glAttachShader(program, vertex_shader);
   glAttachShader(program, fragment_shader);
@@ -159,7 +181,8 @@ GLuint Renderer::CreateShaderProgram(GLuint vertex_shader,
 
   GLint program_linked = 0;
   glGetProgramiv(program, GL_LINK_STATUS, &program_linked);
-  if (!program_linked) {
+  if (!program_linked)
+  {
     GLsizei log_length = 0;
     glGetProgramiv(program, GL_INFO_LOG_LENGTH, &log_length);
 
@@ -173,17 +196,20 @@ GLuint Renderer::CreateShaderProgram(GLuint vertex_shader,
   return program;
 }
 
-GLuint Renderer::LoadShader(const std::string &path, GLenum type) {
+GLuint Renderer::LoadShader(const std::string &path, GLenum type)
+{
   std::cout << "Loading shader " << path << "\n";
   std::string text;
-  if (!LoadFile(path, &text)) {
+  if (!LoadFile(path, &text))
+  {
     std::cerr << "Failed to load " << path << "\n";
     return 0;
   }
   return CreateShader(text, type);
 }
 
-GLuint Renderer::CreateShader(const std::string &text, GLenum type) {
+GLuint Renderer::CreateShader(const std::string &text, GLenum type)
+{
   GLuint shader = glCreateShader(type);
   const GLchar *texts[] = {text.c_str()};
   glShaderSource(shader, 1, texts, nullptr);
@@ -191,7 +217,8 @@ GLuint Renderer::CreateShader(const std::string &text, GLenum type) {
 
   GLint status;
   glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
-  if (status == GL_FALSE) {
+  if (status == GL_FALSE)
+  {
     GLsizei log_length = 0;
     glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_length);
 
@@ -205,7 +232,8 @@ GLuint Renderer::CreateShader(const std::string &text, GLenum type) {
   return shader;
 }
 
-GLuint Renderer::LoadTexture(const std::string &image_path) {
+GLuint Renderer::LoadTexture(const std::string &image_path)
+{
   std::cout << "Loading texture " << image_path << "\n";
 
   GLuint texture;
@@ -226,11 +254,14 @@ GLuint Renderer::LoadTexture(const std::string &image_path) {
                 num_image_components);
   stbi_set_flip_vertically_on_load(false);
 
-  if (image_data) {
+  if (image_data)
+  {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width, image_height, 0,
                  GL_RGBA, GL_UNSIGNED_BYTE, image_data);
     stbi_image_free(image_data);
-  } else {
+  }
+  else
+  {
     std::cerr << "Failed to load texture " << image_path << "\n";
   }
 
@@ -243,7 +274,8 @@ GLuint Renderer::LoadTexture(const std::string &image_path) {
 void GLAPIENTRY Renderer::OnGlError(GLenum source, GLenum type, GLuint id,
                                     GLenum severity, GLsizei length,
                                     const GLchar *message,
-                                    const void *user_param) {
+                                    const void *user_param)
+{
   (void)source;
   (void)id;
   (void)length;

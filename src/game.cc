@@ -41,12 +41,12 @@ static const int kMaxBlockDimension =
 static const int kMinBlockDimension =
     kMinSizeDimension + kDefaultBlockDimension;
 
-static const int kNoValue = 0x000000;  // Should always equal to 0.
-static const int kColor1 = 0xeeeeee;   // White
-static const int kColor2 = 0xea4611;   // Red
-static const int kColor3 = 0x25e10e;   // Green
-static const int kColor4 = 0x296fff;   // Blue
-static const int kColor5 = 0xf9dd07;   // Yellow
+static const int kNoValue = 0x000000; // Should always equal to 0.
+static const int kColor1 = 0xeeeeee;  // White
+static const int kColor2 = 0xea4611;  // Red
+static const int kColor3 = 0x25e10e;  // Green
+static const int kColor4 = 0x296fff;  // Blue
+static const int kColor5 = 0xf9dd07;  // Yellow
 static const int kDefaultColor = kColor1;
 
 static const double kBlockInterval = 0.25;
@@ -80,9 +80,11 @@ Game::Game(Window *window, Renderer *renderer, InputSystem *input)
       crosshair_geometry_(),
       crosshair_material_(),
       crosshair_mesh_(nullptr)
-      {}
+{
+}
 
-Game::~Game() {
+Game::~Game()
+{
   glDeleteProgram(block_shader_program_);
   glDeleteProgram(highlight_shader_program_);
   glDeleteProgram(crosshair_shader_program_);
@@ -98,12 +100,14 @@ Game::~Game() {
   delete world_;
 
   delete player_body_;
-  for (Body *body : world_bodies_) {
+  for (Body *body : world_bodies_)
+  {
     delete body;
   }
 }
 
-bool Game::Initialize() {
+bool Game::Initialize()
+{
   input_->AddListener(this);
 
   window_->Maximize();
@@ -158,13 +162,12 @@ bool Game::Initialize() {
   glm::vec2 crosshair_center(window_size.x / 2.0f - crosshair_size / 2.0f,
                              window_size.y / 2.0f - crosshair_size / 2.0f);
   crosshair_model_matrix =
-      glm::translate(glm::vec3(crosshair_center, 0.0f))
-      * crosshair_model_matrix;
+      glm::translate(glm::vec3(crosshair_center, 0.0f)) * crosshair_model_matrix;
 
   crosshair_model_matrix =
       glm::ortho(0.0f, static_cast<float>(window_size.x),
-                 0.0f, static_cast<float>(window_size.y), 0.0f, 0.01f)
-      * crosshair_model_matrix;
+                 0.0f, static_cast<float>(window_size.y), 0.0f, 0.01f) *
+      crosshair_model_matrix;
   crosshair_mesh_->set_model_matrix(crosshair_model_matrix);
 
   // Create world
@@ -180,15 +183,15 @@ bool Game::Initialize() {
   player_body_ = new BoxBody(glm::vec3(0.5f, 1.0f, 0.5f));
   player_body_->position() =
       glm::vec3(kWorldSize / 2.0f,
-                kWorldSize / 2.0f + world_body->position().y
-                    + world_body->size().y / 2.0f,
+                kWorldSize / 2.0f + world_body->position().y + world_body->size().y / 2.0f,
                 kWorldSize / 2.0f);
   player_body_->position().y += player_body_->size().y / 2.0f;
 
   return true;
 }
 
-void Game::LoadAssets() {
+void Game::LoadAssets()
+{
   block_texture_ =
       renderer_->LoadTexture("assets/textures/block.png");
   highlight_texture_ =
@@ -204,12 +207,14 @@ void Game::LoadAssets() {
       renderer_->LoadShaderProgram("assets/shaders/crosshair");
 }
 
-void Game::Run() {
+void Game::Run()
+{
   // 鼠标位置
   mouse_last_position_ = input_->GetMousePosition();
   double last_time = input_->GetTime();
 
-  while (!input_->ExitIsRequested()) {
+  while (!input_->ExitIsRequested())
+  {
     double current_time = input_->GetTime();
     float delta_time = static_cast<float>(current_time - last_time);
     last_time = current_time;
@@ -221,11 +226,13 @@ void Game::Run() {
   }
 }
 
-void Game::Update(float delta_time) {
+void Game::Update(float delta_time)
+{
   glm::vec2 mouse_position = input_->GetMousePosition();
   mouse_delta_ = mouse_position - mouse_last_position_;
   mouse_last_position_ = mouse_position;
-  if (!window_focused_) {
+  if (!window_focused_)
+  {
     mouse_delta_ = glm::vec2(0.0f);
   }
 
@@ -237,23 +244,27 @@ void Game::Update(float delta_time) {
   ray_cast_hit_ = RayCastBlock();
 
   player_body_->Update(delta_time);
-  for (Body *body : world_bodies_) {
+  for (Body *body : world_bodies_)
+  {
     body->Update(delta_time);
   }
 
   HandleCollisions();
 
   double time = input_->GetTime();
-  if (placing_ && time - last_block_time_ >= block_interval_) {
+  if (placing_ && time - last_block_time_ >= block_interval_)
+  {
     PlaceBlock();
     last_block_time_ = time;
   }
-  if (breaking_ && time - last_block_time_ >= block_interval_) {
+  if (breaking_ && time - last_block_time_ >= block_interval_)
+  {
     BreakBlock();
     last_block_time_ = time;
   }
 
-  if (ray_cast_hit_.block) {
+  if (ray_cast_hit_.block)
+  {
     highlight_mesh_->set_hidden(false);
 
     glm::mat4 highlight_model_matrix(1.0f);
@@ -261,8 +272,7 @@ void Game::Update(float delta_time) {
         kWorldSize * glm::pow(2.0f, static_cast<float>(-block_dimension_));
     float highlight_extra = highlight_size * 0.015f;
     highlight_model_matrix =
-        glm::scale(glm::vec3(highlight_size + highlight_extra))
-        * highlight_model_matrix;
+        glm::scale(glm::vec3(highlight_size + highlight_extra)) * highlight_model_matrix;
     glm::vec3 highlight_position = ray_cast_hit_.position;
     highlight_position.x -= highlight_extra / 2.0f;
     highlight_position.y -= highlight_extra / 2.0f;
@@ -270,17 +280,21 @@ void Game::Update(float delta_time) {
     highlight_model_matrix =
         glm::translate(highlight_position) * highlight_model_matrix;
     highlight_mesh_->set_model_matrix(highlight_model_matrix);
-  } else {
+  }
+  else
+  {
     highlight_mesh_->set_hidden(true);
   }
 
-  if (world_changed_) {
+  if (world_changed_)
+  {
     UpdateWorldCollisionBodies();
     world_changed_ = false;
   }
 }
 
-void Game::UpdatePlayer(float delta_time) {
+void Game::UpdatePlayer(float delta_time)
+{
   player_rotation_.x += -mouse_delta_.y * mouse_sensitivity_;
   player_rotation_.y += -mouse_delta_.x * mouse_sensitivity_;
   player_rotation_.x = glm::clamp(player_rotation_.x, glm::radians(-89.99f),
@@ -293,40 +307,52 @@ void Game::UpdatePlayer(float delta_time) {
   glm::vec3 right = glm::normalize(glm::cross(forward, up));
 
   glm::vec3 direction(0.0f);
-  if (input_->KeyIsPressed(KEY_W)) {
+  if (input_->KeyIsPressed(KEY_W))
+  {
     direction += forward;
   }
-  if (input_->KeyIsPressed(KEY_S)) {
+  if (input_->KeyIsPressed(KEY_S))
+  {
     direction -= forward;
   }
-  if (input_->KeyIsPressed(KEY_A)) {
+  if (input_->KeyIsPressed(KEY_A))
+  {
     direction -= right;
   }
-  if (input_->KeyIsPressed(KEY_D)) {
+  if (input_->KeyIsPressed(KEY_D))
+  {
     direction += right;
   }
-  if (direction == glm::vec3(0.0f)) {
+  if (direction == glm::vec3(0.0f))
+  {
     player_body_->velocity().x = 0.0f;
     player_body_->velocity().z = 0.0f;
-  } else {
+  }
+  else
+  {
     glm::vec3 velocity = glm::normalize(direction) * speed_;
     player_body_->velocity().x = velocity.x;
     player_body_->velocity().z = velocity.z;
   }
 
-  if (input_->KeyIsPressed(KEY_SPACE)) {
+  if (input_->KeyIsPressed(KEY_SPACE))
+  {
     player_body_->velocity().y = 3.0f * glm::pow(2.0f, -size_dimension_);
   }
 
-  if (input_->KeyIsPressed(KEY_LEFT_SHIFT)) {
+  if (input_->KeyIsPressed(KEY_LEFT_SHIFT))
+  {
     running_ = true;
-  } else {
+  }
+  else
+  {
     running_ = false;
   }
 
   player_body_->acceleration().y = -9.0f * glm::pow(2.0f, -size_dimension_);
 
-  if (player_body_->position().y < -12 * kWorldSize) {
+  if (player_body_->position().y < -12 * kWorldSize)
+  {
     player_body_->position().x = kWorldSize / 2.0f;
     player_body_->position().z = kWorldSize / 2.0f;
     player_body_->position().y = 12 * kWorldSize;
@@ -340,34 +366,42 @@ void Game::UpdatePlayer(float delta_time) {
   renderer_->set_camera_rotation(player_rotation_);
 }
 
-void Game::HandleCollisions() {
+void Game::HandleCollisions()
+{
   Body *body1 = player_body_;
-  for (size_t i = 0; i < world_bodies_.size(); ++i) {
+  for (size_t i = 0; i < world_bodies_.size(); ++i)
+  {
     BoxBody *body2 = world_bodies_[i];
     if (body1->CollidesWith(body2) &&
-        !(body1->is_fixed() && body2->is_fixed())) {
+        !(body1->is_fixed() && body2->is_fixed()))
+    {
       ResolveBoxCollision(body1, body2);
     }
   }
 }
 
-bool Game::PlayerCollidesWithWorld() const {
-  for (size_t i = 0; i < world_bodies_.size(); ++i) {
+bool Game::PlayerCollidesWithWorld() const
+{
+  for (size_t i = 0; i < world_bodies_.size(); ++i)
+  {
     BoxBody *body = world_bodies_[i];
-    if (player_body_->CollidesWith(body)) {
+    if (player_body_->CollidesWith(body))
+    {
       return true;
     }
   }
   return false;
 }
 
-void Game::ResolveBoxCollision(Body *body1, Body *body2) {
+void Game::ResolveBoxCollision(Body *body1, Body *body2)
+{
   BoundingBox box1 = body1->GetBoundingBox();
   BoundingBox box2 = body2->GetBoundingBox();
 
   // Swap the bodies if the second body has a velocity.
   // Note: this doesn't currently handle collisions with two moving bodies.
-  if (body2->velocity() != glm::vec3(0.0f)) {
+  if (body2->velocity() != glm::vec3(0.0f))
+  {
     Body *tmp = body1;
     body1 = body2;
     body2 = tmp;
@@ -379,47 +413,69 @@ void Game::ResolveBoxCollision(Body *body1, Body *body2) {
 
   float bounce = 0.0f;
 
-  if (overlap_x <= overlap_y && overlap_x <= overlap_z) {
-    if (body1->position().x < body2->position().x) {
+  if (overlap_x <= overlap_y && overlap_x <= overlap_z)
+  {
+    if (body1->position().x < body2->position().x)
+    {
       body1->position().x -= overlap_x;
-      if (body1->velocity().x > 0.0f) {
+      if (body1->velocity().x > 0.0f)
+      {
         body1->velocity().x *= -bounce;
       }
-    } else {
+    }
+    else
+    {
       body1->position().x += overlap_x;
-      if (body1->velocity().x < 0.0f) {
+      if (body1->velocity().x < 0.0f)
+      {
         body1->velocity().x *= -bounce;
       }
     }
-  } else if (overlap_y <= overlap_x && overlap_y <= overlap_z) {
-    if (body1->position().y < body2->position().y) {
+  }
+  else if (overlap_y <= overlap_x && overlap_y <= overlap_z)
+  {
+    if (body1->position().y < body2->position().y)
+    {
       body1->position().y -= overlap_y;
-      if (body1->velocity().y > 0.0f) {
-        body1->velocity().y *= -bounce;
-      }
-    } else {
-      body1->position().y += overlap_y;
-      if (body1->velocity().y < 0.0f) {
+      if (body1->velocity().y > 0.0f)
+      {
         body1->velocity().y *= -bounce;
       }
     }
-  } else {
-    if (body1->position().z < body2->position().z) {
+    else
+    {
+      body1->position().y += overlap_y;
+      if (body1->velocity().y < 0.0f)
+      {
+        body1->velocity().y *= -bounce;
+      }
+    }
+  }
+  else
+  {
+    if (body1->position().z < body2->position().z)
+    {
       body1->position().z -= overlap_z;
-      if (body1->velocity().z > 0.0f) {
+      if (body1->velocity().z > 0.0f)
+      {
         body1->velocity().z *= -bounce;
       }
-    } else {
+    }
+    else
+    {
       body1->position().z += overlap_z;
-      if (body1->velocity().z < 0.0f) {
+      if (body1->velocity().z < 0.0f)
+      {
         body1->velocity().z *= -bounce;
       }
     }
   }
 }
 
-void Game::UpdateWorldCollisionBodies() {
-  for (Body *body : world_bodies_) {
+void Game::UpdateWorldCollisionBodies()
+{
+  for (Body *body : world_bodies_)
+  {
     delete body;
   }
   world_bodies_.clear();
@@ -427,12 +483,15 @@ void Game::UpdateWorldCollisionBodies() {
 }
 
 void Game::AddWorldCollisionBody(Block *block, float x, float y, float z,
-                                 float size) {
-  if (!block) {
+                                 float size)
+{
+  if (!block)
+  {
     return;
   }
 
-  if (block->value() != kNoValue) {
+  if (block->value() != kNoValue)
+  {
     BoxBody *body = new BoxBody(glm::vec3(size));
     body->set_fixed(true);
     body->position() = glm::vec3(x + size / 2.0f, y + size / 2.0f,
@@ -440,29 +499,31 @@ void Game::AddWorldCollisionBody(Block *block, float x, float y, float z,
     world_bodies_.push_back(body);
   }
 
-  if (!block->is_leaf()) {
+  if (!block->is_leaf())
+  {
     size /= 2;
     AddWorldCollisionBody(
-        block->child(0), x       , y + size   , z + size, size);
+        block->child(0), x, y + size, z + size, size);
     AddWorldCollisionBody(
-        block->child(1), x + size, y + size   , z + size, size);
+        block->child(1), x + size, y + size, z + size, size);
     AddWorldCollisionBody(
-        block->child(2), x       , y + size   , z       , size);
+        block->child(2), x, y + size, z, size);
     AddWorldCollisionBody(
-        block->child(3), x + size, y + size   , z       , size);
+        block->child(3), x + size, y + size, z, size);
 
     AddWorldCollisionBody(
-        block->child(4), x       , y          , z + size, size);
+        block->child(4), x, y, z + size, size);
     AddWorldCollisionBody(
-        block->child(5), x + size, y          , z + size, size);
+        block->child(5), x + size, y, z + size, size);
     AddWorldCollisionBody(
-        block->child(6), x       , y          , z       , size);
+        block->child(6), x, y, z, size);
     AddWorldCollisionBody(
-        block->child(7), x + size, y          , z       , size);
+        block->child(7), x + size, y, z, size);
   }
 }
 
-void Game::GenerateWorld() {
+void Game::GenerateWorld()
+{
   delete world_;
   world_ = new Block();
   world_->set_child(4, new Block(kColor3));
@@ -472,32 +533,39 @@ void Game::GenerateWorld() {
   world_changed_ = true;
 }
 
-void Game::PlaceBlock() {
+void Game::PlaceBlock()
+{
   RayCastHit hit = RayCastBlock();
   // TODO: Make sure there are no smaller blocks contained at some dimension
   // at the previous position.
-  if (hit.block && hit.dimension <= block_dimension_) {
+  if (hit.block && hit.dimension <= block_dimension_)
+  {
     SetBlock(hit.previous_position.x, hit.previous_position.y,
              hit.previous_position.z, block_dimension_, color_);
   }
 }
 
-void Game::BreakBlock() {
+void Game::BreakBlock()
+{
   RayCastHit hit = RayCastBlock();
-  if (hit.block) {
+  if (hit.block)
+  {
     SetBlock(hit.position.x, hit.position.y, hit.position.z,
              block_dimension_, kNoValue);
   }
 }
 
-void Game::CopyBlock() {
+void Game::CopyBlock()
+{
   RayCastHit hit = RayCastBlock();
-  if (hit.block) {
+  if (hit.block)
+  {
     color_ = hit.block->value();
   }
 }
 
-Game::RayCastHit Game::RayCastBlock() {
+Game::RayCastHit Game::RayCastBlock()
+{
   RayCastHit hit;
   hit.block = nullptr;
   hit.dimension = 0;
@@ -510,11 +578,13 @@ Game::RayCastHit Game::RayCastBlock() {
   float step_size =
       0.05f * glm::pow(2.0f, static_cast<float>(-block_dimension_));
 
-  for (int i = 0; i < num_steps; ++i) {
+  for (int i = 0; i < num_steps; ++i)
+  {
     int dimension;
     Block *block = GetBlock(hit.position.x, hit.position.y, hit.position.z,
                             &dimension);
-    if (block && (!block->is_leaf() || block->value() != kNoValue)) {
+    if (block && (!block->is_leaf() || block->value() != kNoValue))
+    {
       hit.block = block;
       hit.dimension = dimension;
 
@@ -539,9 +609,11 @@ Game::RayCastHit Game::RayCastBlock() {
   return hit;
 }
 
-Block *Game::GetBlock(float x, float y, float z, int *dimension) {
+Block *Game::GetBlock(float x, float y, float z, int *dimension)
+{
   if (x < 0.0f || y < 0.0f || z < 0.0f ||
-      x >= kWorldSize || y >= kWorldSize || z >= kWorldSize) {
+      x >= kWorldSize || y >= kWorldSize || z >= kWorldSize)
+  {
     return nullptr;
   }
 
@@ -552,8 +624,10 @@ Block *Game::GetBlock(float x, float y, float z, int *dimension) {
   float dy = 0.0f;
   float dz = 0.0f;
 
-  for (int i = 0; ; ++i) {
-    if (block->is_leaf()) {
+  for (int i = 0;; ++i)
+  {
+    if (block->is_leaf())
+    {
       break;
     }
 
@@ -564,38 +638,54 @@ Block *Game::GetBlock(float x, float y, float z, int *dimension) {
     float center_z = size + dz;
 
     int index = 0;
-    if        (x  < center_x && y >= center_y && z >= center_z) {
+    if (x < center_x && y >= center_y && z >= center_z)
+    {
       index = 0;
       dy += size;
       dz += size;
-    } else if (x >= center_x && y >= center_y && z >= center_z) {
+    }
+    else if (x >= center_x && y >= center_y && z >= center_z)
+    {
       index = 1;
       dx += size;
       dy += size;
       dz += size;
-    } else if (x  < center_x && y >= center_y && z  < center_z) {
+    }
+    else if (x < center_x && y >= center_y && z < center_z)
+    {
       index = 2;
       dy += size;
-    } else if (x >= center_x && y >= center_y && z  < center_z) {
+    }
+    else if (x >= center_x && y >= center_y && z < center_z)
+    {
       index = 3;
       dx += size;
       dy += size;
-    } else if (x  < center_x && y  < center_y && z >= center_z) {
+    }
+    else if (x < center_x && y < center_y && z >= center_z)
+    {
       index = 4;
       dz += size;
-    } else if (x >= center_x && y  < center_y && z >= center_z) {
+    }
+    else if (x >= center_x && y < center_y && z >= center_z)
+    {
       index = 5;
       dx += size;
       dz += size;
-    } else if (x  < center_x && y  < center_y && z  < center_z) {
+    }
+    else if (x < center_x && y < center_y && z < center_z)
+    {
       index = 6;
-    } else if (x >= center_x && y  < center_y && z  < center_z) {
+    }
+    else if (x >= center_x && y < center_y && z < center_z)
+    {
       index = 7;
       dx += size;
     }
 
     Block *child = block->child(index);
-    if (!child) {
+    if (!child)
+    {
       return nullptr;
     }
     block = child;
@@ -604,9 +694,11 @@ Block *Game::GetBlock(float x, float y, float z, int *dimension) {
   return block;
 }
 
-void Game::SetBlock(float x, float y, float z, int dimension, int value) {
+void Game::SetBlock(float x, float y, float z, int dimension, int value)
+{
   if (x < 0.0f || y < 0.0f || z < 0.0f ||
-      x >= kWorldSize || y >= kWorldSize || z >= kWorldSize) {
+      x >= kWorldSize || y >= kWorldSize || z >= kWorldSize)
+  {
     return;
   }
 
@@ -616,45 +708,62 @@ void Game::SetBlock(float x, float y, float z, int dimension, int value) {
   float dy = 0.0f;
   float dz = 0.0f;
 
-  for (int i = 0; i < dimension; ++i) {
+  for (int i = 0; i < dimension; ++i)
+  {
     size /= 2.0f;
     float center_x = size + dx;
     float center_y = size + dy;
     float center_z = size + dz;
 
     int index = 0;
-    if        (x  < center_x && y >= center_y && z >= center_z) {
+    if (x < center_x && y >= center_y && z >= center_z)
+    {
       index = 0;
       dy += size;
       dz += size;
-    } else if (x >= center_x && y >= center_y && z >= center_z) {
+    }
+    else if (x >= center_x && y >= center_y && z >= center_z)
+    {
       index = 1;
       dx += size;
       dy += size;
       dz += size;
-    } else if (x  < center_x && y >= center_y && z  < center_z) {
+    }
+    else if (x < center_x && y >= center_y && z < center_z)
+    {
       index = 2;
       dy += size;
-    } else if (x >= center_x && y >= center_y && z  < center_z) {
+    }
+    else if (x >= center_x && y >= center_y && z < center_z)
+    {
       index = 3;
       dx += size;
       dy += size;
-    } else if (x  < center_x && y  < center_y && z >= center_z) {
+    }
+    else if (x < center_x && y < center_y && z >= center_z)
+    {
       index = 4;
       dz += size;
-    } else if (x >= center_x && y  < center_y && z >= center_z) {
+    }
+    else if (x >= center_x && y < center_y && z >= center_z)
+    {
       index = 5;
       dx += size;
       dz += size;
-    } else if (x  < center_x && y  < center_y && z  < center_z) {
+    }
+    else if (x < center_x && y < center_y && z < center_z)
+    {
       index = 6;
-    } else if (x >= center_x && y  < center_y && z  < center_z) {
+    }
+    else if (x >= center_x && y < center_y && z < center_z)
+    {
       index = 7;
       dx += size;
     }
 
     Block *child = block->child(index);
-    if (!child) {
+    if (!child)
+    {
       child = new Block(block->value());
       block->set_child(index, child);
     }
@@ -666,7 +775,8 @@ void Game::SetBlock(float x, float y, float z, int dimension, int value) {
   world_changed_ = true;
 }
 
-void Game::SetPlayerSize(int dimension) {
+void Game::SetPlayerSize(int dimension)
+{
   float last_player_height = player_body_->size().y;
 
   float player_height = glm::pow(kPlayerHeight, -size_dimension_);
@@ -677,8 +787,10 @@ void Game::SetPlayerSize(int dimension) {
   player_body_->position().y += height_offset;
 }
 
-void Game::ShrinkSize() {
-  if (size_dimension_ >= kMinSizeDimension) {
+void Game::ShrinkSize()
+{
+  if (size_dimension_ >= kMinSizeDimension)
+  {
     return;
   }
   ++size_dimension_;
@@ -687,14 +799,17 @@ void Game::ShrinkSize() {
   ShrinkBlock();
 }
 
-void Game::GrowSize() {
-  if (size_dimension_ <= kMaxSizeDimension) {
+void Game::GrowSize()
+{
+  if (size_dimension_ <= kMaxSizeDimension)
+  {
     return;
   }
   --size_dimension_;
   size_dimension_ = glm::max(size_dimension_, kMaxSizeDimension);
   SetPlayerSize(size_dimension_);
-  if (PlayerCollidesWithWorld()) {
+  if (PlayerCollidesWithWorld())
+  {
     ++size_dimension_;
     SetPlayerSize(size_dimension_);
     return;
@@ -702,31 +817,37 @@ void Game::GrowSize() {
   GrowBlock();
 }
 
-void Game::ShrinkBlock() {
+void Game::ShrinkBlock()
+{
   ++block_dimension_;
   block_dimension_ = glm::min(block_dimension_, kMinBlockDimension);
 }
 
-void Game::GrowBlock() {
+void Game::GrowBlock()
+{
   --block_dimension_;
   block_dimension_ = glm::max(block_dimension_, kMaxBlockDimension);
 }
 
-void Game::SetColor(int color) {
+void Game::SetColor(int color)
+{
   color_ = color;
 }
 
-void Game::FocusWindow() {
+void Game::FocusWindow()
+{
   window_focused_ = true;
   window_->SetCursorEnabled(false);
 }
 
-void Game::UnfocusWindow() {
+void Game::UnfocusWindow()
+{
   window_focused_ = false;
   window_->SetCursorEnabled(true);
 }
 
-void Game::Render() {
+void Game::Render()
+{
   glm::ivec2 window_size = window_->GetSize();
   renderer_->set_aspect(static_cast<float>(window_size.x) / window_size.y);
 
@@ -749,12 +870,15 @@ void Game::Render() {
   renderer_->SwapBuffers();
 }
 
-void Game::DrawBlock(Block *block, float x, float y, float z, float size) {
-  if (!block) {
+void Game::DrawBlock(Block *block, float x, float y, float z, float size)
+{
+  if (!block)
+  {
     return;
   }
 
-  if (block->value() != kNoValue) {
+  if (block->value() != kNoValue)
+  {
     glm::mat4 model_matrix(1.0f);
     model_matrix = glm::scale(glm::vec3(size)) * model_matrix;
     model_matrix = glm::translate(glm::vec3(x, y, z)) * model_matrix;
@@ -772,101 +896,128 @@ void Game::DrawBlock(Block *block, float x, float y, float z, float size) {
     renderer_->RenderMesh(block_mesh_);
   }
 
-  if (!block->is_leaf()) {
+  if (!block->is_leaf())
+  {
     size /= 2;
-    DrawBlock(block->child(0), x       , y + size   , z + size, size);
-    DrawBlock(block->child(1), x + size, y + size   , z + size, size);
-    DrawBlock(block->child(2), x       , y + size   , z       , size);
-    DrawBlock(block->child(3), x + size, y + size   , z       , size);
+    DrawBlock(block->child(0), x, y + size, z + size, size);
+    DrawBlock(block->child(1), x + size, y + size, z + size, size);
+    DrawBlock(block->child(2), x, y + size, z, size);
+    DrawBlock(block->child(3), x + size, y + size, z, size);
 
-    DrawBlock(block->child(4), x       , y          , z + size, size);
-    DrawBlock(block->child(5), x + size, y          , z + size, size);
-    DrawBlock(block->child(6), x       , y          , z       , size);
-    DrawBlock(block->child(7), x + size, y          , z       , size);
+    DrawBlock(block->child(4), x, y, z + size, size);
+    DrawBlock(block->child(5), x + size, y, z + size, size);
+    DrawBlock(block->child(6), x, y, z, size);
+    DrawBlock(block->child(7), x + size, y, z, size);
   }
 }
 
-void Game::MouseDown(int button) {
-  if (!window_focused_) {
+void Game::MouseDown(int button)
+{
+  if (!window_focused_)
+  {
     FocusWindow();
     return;
   }
 
-  if (button == MOUSE_BUTTON_LEFT) {
+  if (button == MOUSE_BUTTON_LEFT)
+  {
     BreakBlock();
     breaking_ = true;
     placing_ = false;
     last_block_time_ = input_->GetTime();
   }
-  if (button == MOUSE_BUTTON_RIGHT) {
+  if (button == MOUSE_BUTTON_RIGHT)
+  {
     PlaceBlock();
     placing_ = true;
     breaking_ = false;
     last_block_time_ = input_->GetTime();
   }
-  if (button == MOUSE_BUTTON_MIDDLE) {
+  if (button == MOUSE_BUTTON_MIDDLE)
+  {
     CopyBlock();
   }
 }
 
-void Game::MouseUp(int button) {
-  if (button == MOUSE_BUTTON_LEFT) {
+void Game::MouseUp(int button)
+{
+  if (button == MOUSE_BUTTON_LEFT)
+  {
     breaking_ = false;
   }
-  if (button == MOUSE_BUTTON_RIGHT) {
+  if (button == MOUSE_BUTTON_RIGHT)
+  {
     placing_ = false;
   }
 }
 
-void Game::Scroll(float offset) {
-  if (offset > 0) {
+void Game::Scroll(float offset)
+{
+  if (offset > 0)
+  {
     ShrinkSize();
-  } else if (offset < 0) {
+  }
+  else if (offset < 0)
+  {
     GrowSize();
   }
 }
 
-void Game::KeyDown(int key) {
-  if (key == KEY_Q) {
+void Game::KeyDown(int key)
+{
+  if (key == KEY_Q)
+  {
     ShrinkSize();
   }
-  if (key == KEY_E) {
+  if (key == KEY_E)
+  {
     GrowSize();
   }
-  if (key == KEY_Z) {
+  if (key == KEY_Z)
+  {
     ShrinkBlock();
   }
-  if (key == KEY_C) {
+  if (key == KEY_C)
+  {
     GrowBlock();
   }
 
-  if (key == KEY_1) {
+  if (key == KEY_1)
+  {
     SetColor(kColor1);
   }
-  if (key == KEY_2) {
+  if (key == KEY_2)
+  {
     SetColor(kColor2);
   }
-  if (key == KEY_3) {
+  if (key == KEY_3)
+  {
     SetColor(kColor3);
   }
-  if (key == KEY_4) {
+  if (key == KEY_4)
+  {
     SetColor(kColor4);
   }
-  if (key == KEY_5) {
+  if (key == KEY_5)
+  {
     SetColor(kColor5);
   }
 
-  if (key == KEY_R) {
+  if (key == KEY_R)
+  {
     GenerateWorld();
   }
 
-  if (key == KEY_G) {
+  if (key == KEY_G)
+  {
     wireframe_ = !wireframe_;
   }
-  if (key == KEY_ESCAPE) {
+  if (key == KEY_ESCAPE)
+  {
     UnfocusWindow();
   }
 }
 
-void Game::KeyUp(int key) {
+void Game::KeyUp(int key)
+{
 }

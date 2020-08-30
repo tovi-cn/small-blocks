@@ -31,8 +31,11 @@ bool Window::Initialize(const std::string &title, glm::ivec2 size) {
     return false;
   }
 
+  // openGl 大版本号
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  // openGl 小版本号
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+  // 窗口
   window_ = glfwCreateWindow(size.x, size.y,
                              title.c_str(),
                              nullptr, nullptr);
